@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Verify Pre-Registration" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="glassmorphism rounded-2xl p-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">{% trans "Verify Pre-Registration" %}</h1>
+            <a href="{% url 'dashboard:index' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                {% trans "Back to Dashboard" %}
+            </a>
+        </div>
+        
+        <!-- Visitor Information -->
+        <div class="glassmorphism rounded-xl p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">{% trans "Visitor Information" %}</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Full Name" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.visitor.full_name }}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Contact Number" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.visitor.contact_number }}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Company" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.visitor.company|default:"-" }}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Category" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.visitor.category.name }}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Purpose" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.visitor.purpose|default:"-" }}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Expected Arrival Date" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {% if pre_registration.expected_arrival_date %}
+                            {{ pre_registration.expected_arrival_date|date:"F d, Y" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pre-Registration Details -->
+        <div class="glassmorphism rounded-xl p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">{% trans "Pre-Registration Details" %}</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Registered By" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.registered_by.get_full_name|default:pre_registration.registered_by.username }}
+                        <span class="text-sm text-gray-500">({{ pre_registration.registered_by.profile.get_role_display }})</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Registration Date" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.created_at|date:"F d, Y H:i" }}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Status" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {% if pre_registration.is_verified %}
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                {% trans "Verified" %}
+                            </span>
+                        {% else %}
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                {% trans "Pending Verification" %}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Expires At" %}</label>
+                    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        {{ pre_registration.expires_at|date:"F d, Y H:i" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Success/Failure Modal -->
+        <div id="preverify-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg p-6">
+                <div class="flex flex-col items-center text-center">
+                    <div id="preverify-lottie" class="w-40 h-40 mb-4 flex items-center justify-center"></div>
+                    <h3 id="preverify-title" class="text-2xl font-semibold mb-2"></h3>
+                    <p id="preverify-message" class="text-gray-600 dark:text-gray-300 mb-4"></p>
+                    <div id="preverify-details" class="w-full text-left hidden">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Full Name" %}</div>
+                                <div id="pv-fullname" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Company" %}</div>
+                                <div id="pv-company" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Category" %}</div>
+                                <div id="pv-category" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Contact" %}</div>
+                                <div id="pv-contact" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Pass Number" %}</div>
+                                <div id="pv-pass" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Check-in" %}</div>
+                                <div id="pv-checkin" class="font-medium"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-2">
+                        <a id="pv-print" href="#" target="_blank" class="hidden px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{% trans "Print Pass" %}</a>
+                        <button type="button" id="pv-close" class="px-5 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">{% trans "Close" %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if not pre_registration.is_verified %}
+        <div class="glassmorphism rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-4">{% trans "Verification Actions" %}</h2>
+            <div class="flex space-x-4">
+                <form method="post" class="inline" id="preverify-verify-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="verify">
+                    <button type="submit" 
+                            class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        {% trans "Verify & Check In" %}
+                    </button>
+                </form>
+                
+                <form method="post" class="inline" id="preverify-reject-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    <button type="submit" 
+                            class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        {% trans "Reject" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="text-center">
+                <div class="text-green-600 mb-4">
+                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-green-600 mb-2">{% trans "Already Verified" %}</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    {% trans "This pre-registration has been verified by" %} {{ pre_registration.verified_by.get_full_name|default:pre_registration.verified_by.username }}
+                    {% trans "on" %} {{ pre_registration.verified_at|date:"F d, Y H:i" }}
+                </p>
+                {% if pre_registration.visitor.pass_number %}
+                <a href="{% url 'visitors:print_pass' pre_registration.visitor.id %}" 
+                   class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z"></path>
+                    </svg>
+                    {% trans "Print Visitor Pass" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+    function getCookie(name){const v=`; ${document.cookie}`;const p=v.split(`; ${name}=`);if(p.length===2) return p.pop().split(';').shift();}
+    // Helper: load lottie only once
+    async function ensureLottie() {
+        if (window.lottie) return;
+        await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/dist/lottie.min.js';
+            s.async = true; s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+        });
+    }
+    
+    function renderStatusIcon(container, success) {
+        if (!container) return;
+        const svgSuccess = `
+          <svg class="w-32 h-32 md:w-36 md:h-36 text-green-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke-width="2" class="opacity-30" />
+            <path d="M9 12l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>`;
+        const svgFail = `
+          <svg class="w-32 h-32 md:w-36 md:h-36 text-red-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke-width="2" class="opacity-30" />
+            <path d="M15 9l-6 6M9 9l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>`;
+        container.innerHTML = success ? svgSuccess : svgFail;
+    }
+    function showModal(opts){
+        const modal=document.getElementById('preverify-modal');
+        const lottieBox=document.getElementById('preverify-lottie');
+        const title=document.getElementById('preverify-title');
+        const msg=document.getElementById('preverify-message');
+        const details=document.getElementById('preverify-details');
+        const pvPrint=document.getElementById('pv-print');
+        lottieBox.innerHTML=''; details.classList.add('hidden'); pvPrint.classList.add('hidden');
+        title.textContent=opts.success?'{% trans "Verification Successful" %}':'{% trans "Verification Failed" %}';
+        msg.textContent=opts.message||'';
+    
+        // Immediate fallback icon (replaced by Lottie if available)
+        renderStatusIcon(lottieBox, !!opts.success);
+    
+        if(opts.visitor){
+            details.classList.remove('hidden');
+            document.getElementById('pv-fullname').textContent=opts.visitor.full_name||'';
+            document.getElementById('pv-company').textContent=opts.visitor.company||'';
+            document.getElementById('pv-category').textContent=opts.visitor.category||'';
+            document.getElementById('pv-contact').textContent=opts.visitor.contact_number||'';
+            document.getElementById('pv-pass').textContent=opts.visitor.pass_number||'';
+            document.getElementById('pv-checkin').textContent=opts.visitor.check_in_time||'';
+            if(opts.print_url){ pvPrint.href=opts.print_url; pvPrint.classList.remove('hidden'); }
+        }
+        ensureLottie().then(()=>{
+            if(!window.lottie) return;
+            lottieBox.innerHTML='';
+            window.lottie.loadAnimation({container:lottieBox,renderer:'svg',loop:false,autoplay:true,path:opts.success?'https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json':'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json'});
+        }).catch(()=>{});
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+    }
+    function hideModal(){const modal=document.getElementById('preverify-modal'); modal.classList.add('hidden'); modal.classList.remove('flex');}
+    document.addEventListener('DOMContentLoaded',function(){
+        const close=document.getElementById('pv-close'); if(close) close.addEventListener('click', hideModal);
+        async function hook(formId){
+            const form=document.getElementById(formId); if(!form) return;
+            form.addEventListener('submit', async function(e){
+                e.preventDefault();
+                const btn=form.querySelector('button[type="submit"]'); const original=btn?btn.textContent:'';
+                if(btn){btn.disabled=true; btn.textContent='{% trans "Processing..." %}';}
+                try{
+                    const fd=new FormData(form); fd.append('ajax','1');
+                    const res=await fetch(window.location.href,{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','X-CSRFToken': getCookie('csrftoken') || fd.get('csrfmiddlewaretoken') || ''}, body:fd});
+                    const data=await res.json().catch(()=>null);
+                    if(!data) throw new Error('Bad response');
+                    if(data.status==='success'){
+                        showModal({success:true,message:data.message,visitor:data.visitor,print_url:data.print_url});
+                    }else{
+                        showModal({success:false,message:data.message||'{% trans "Request failed" %}'});
+                    }
+                }catch(err){
+                    showModal({success:false,message:'{% trans "Server error. Please try again." %}'});
+                }finally{
+                    if(btn){btn.disabled=false; btn.textContent=original;}
+                }
+            });
+        }
+        hook('preverify-verify-form');
+        hook('preverify-reject-form');
+    });
+})();
+</script>
+{% endblock %}

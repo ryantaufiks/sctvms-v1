@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Pre-Register Visitor" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="glassmorphism rounded-xl p-6">
+        <h1 class="text-3xl font-bold mb-2">{% trans "Pre-Registration Management" %}</h1>
+        <p class="text-gray-600 dark:text-gray-400">{% trans "Create new pre-registrations and manage existing ones" %}</p>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Left Column: Create Pre-Registration -->
+        <div class="glassmorphism rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-6">{% trans "Create Pre-Registration" %}</h2>
+        
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="full_name" class="block text-sm font-medium mb-2">{% trans "Full Name" %} *</label>
+                    <input type="text" id="full_name" name="full_name" required 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label for="phone" class="block text-sm font-medium mb-2">{% trans "Contact Number" %} *</label>
+                    <input type="tel" id="phone" name="phone" required 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="company" class="block text-sm font-medium mb-2">{% trans "Company" %}</label>
+                    <input type="text" id="company" name="company" 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label for="category" class="block text-sm font-medium mb-2">{% trans "Category" %} *</label>
+                    <select id="category" name="category" required 
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">{% trans "Select Category" %}</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div>
+                <label for="purpose" class="block text-sm font-medium mb-2">{% trans "Purpose of Visit" %}</label>
+                <textarea id="purpose" name="purpose" rows="3" 
+                          class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="expected_date" class="block text-sm font-medium mb-2">{% trans "Expected Date" %}</label>
+                    <input type="date" id="expected_date" name="expected_date" 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label for="expected_time" class="block text-sm font-medium mb-2">{% trans "Expected Time" %}</label>
+                    <input type="time" id="expected_time" name="expected_time" 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% if address_config and address_config.enable_tower %}
+                <div>
+                    <label for="tower" class="block text-sm font-medium mb-2">{{ address_config.tower_label|default:"Tower" }}</label>
+                    <select id="tower" name="tower"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">{% trans "Select Tower" %}</option>
+                        {% for t in address_config.tower_options %}
+                            <option value="{{ t }}">{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                
+                {% if address_config and address_config.enable_level %}
+                <div>
+                    <label for="level" class="block text-sm font-medium mb-2">{{ address_config.level_label|default:"Level" }}</label>
+                    <select id="level" name="level"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">{% trans "Select Level" %}</option>
+                        {% for lv in address_config.level_options %}
+                            <option value="{{ lv }}">{{ lv }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                
+                {% if address_config and address_config.enable_unit %}
+                <div>
+                    <label for="unit" class="block text-sm font-medium mb-2">{{ address_config.unit_label|default:"Unit" }}</label>
+                    <select id="unit" name="unit"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">{% trans "Select Unit" %}</option>
+                        {% for u in address_config.unit_options %}
+                            <option value="{{ u }}">{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="flex justify-end space-x-4">
+                <a href="{% url 'dashboard:index' %}" 
+                   class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    {% trans "Cancel" %}
+                </a>
+                <button type="submit" 
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    {% trans "Create Pre-Registration" %}
+                </button>
+            </div>
+        </form>
+        </div>
+        
+        <!-- Right Column: Pre-Registration List -->
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">{% trans "Recent Pre-Registrations" %}</h2>
+                <a href="{% url 'visitors:pre_registration_list' %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium">
+                    {% trans "View All" %} →
+                </a>
+            </div>
+            
+            {% if recent_pre_registrations %}
+            <div class="space-y-4 max-h-96 overflow-y-auto">
+                {% for pre_reg in recent_pre_registrations %}
+                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                                    {{ pre_reg.visitor.full_name|first|upper }}
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-gray-900 dark:text-white">{{ pre_reg.visitor.full_name }}</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ pre_reg.visitor.company|default:"-" }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <div>
+                                    <span class="font-medium">{% trans "Created:" %}</span>
+                                    <br>{{ pre_reg.created_at|date:"M d, H:i" }}
+                                </div>
+                                <div>
+                                    <span class="font-medium">{% trans "Expires:" %}</span>
+                                    <br>{{ pre_reg.expires_at|date:"M d, H:i" }}
+                                </div>
+                                <div>
+                                    <span class="font-medium">{% trans "Created By:" %}</span>
+                                    <br>{% if pre_reg.registered_by.first_name %}{{ pre_reg.registered_by.first_name }} {{ pre_reg.registered_by.last_name }}{% else %}{{ pre_reg.registered_by.username }}{% endif %}
+                                </div>
+                                <div>
+                                    <span class="font-medium">{% trans "Status:" %}</span>
+                                    <br>
+                                    {% if pre_reg.is_used %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                            {% trans "Used" %}
+                                        </span>
+                                    {% elif pre_reg.is_expired %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                            {% trans "Expired" %}
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                            {% trans "Pending" %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-2 ml-4">
+                            <!-- View Registration Link -->
+                            <a href="{% url 'visitors:pre_register_form' pre_reg.unique_link %}" target="_blank" 
+                               class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" 
+                               title="{% trans 'View Registration Link' %}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M7 7l10 10M17 7v4m0 0h-4"></path>
+                                </svg>
+                            </a>
+                            
+                            <!-- Copy Registration Link -->
+                            <button type="button"
+                                    onclick="copyPreRegLink('{{ pre_reg.pre_reg_link|escapejs }}')"
+                                    class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                    title="{% trans 'Copy Registration Link' %}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 12h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2v-6a2 2 0 012-2z"></path>
+                                </svg>
+                            </button>
+                            
+                            {% if pre_reg.qr_code %}
+                            <a href="{{ pre_reg.qr_code.url }}" target="_blank" 
+                               class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" 
+                               title="{% trans 'View QR Code' %}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                </svg>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="text-lg font-medium mb-2">{% trans "No pre-registrations yet" %}</h3>
+                <p>{% trans "Create your first pre-registration using the form on the left" %}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<script>
+function copyPreRegLink(link) {
+    if (!link) return;
+    try {
+        navigator.clipboard.writeText(link)
+            .then(() => showCopyToast('Link copied to clipboard'))
+            .catch(() => fallbackCopy(link));
+    } catch (e) {
+        fallbackCopy(link);
+    }
+}
+
+function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showCopyToast('Link copied');
+}
+
+function showCopyToast(message) {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.className = 'fixed top-4 right-4 px-3 py-2 rounded-lg text-sm bg-black/70 text-white shadow-lg z-50';
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 1200);
+}
+</script>

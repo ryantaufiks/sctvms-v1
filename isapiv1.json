@@ -1,0 +1,97 @@
+{
+"info": {
+"_postman_id": "c4e21a7f-df12-487e-b9f1-9b2f9b74d111",
+"name": "Hikvision Face Registration",
+"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json
+"
+},
+"item": [
+{
+"name": "1️⃣ Add User (Visitor) with Password",
+"request": {
+"method": "PUT",
+"header": [
+{
+"key": "Content-Type",
+"value": "application/json"
+}
+],
+"body": {
+"mode": "raw",
+"raw": "{\n "UserInfo": {\n "employeeNo": "1112",\n "name": "Rian Test 11",\n "userType": "normal",\n "valid": {\n "enable": true,\n "beginTime": "2025-10-01T00:00:00",\n "endTime": "2030-01-01T23:59:59"\n },\n "doorRight": "1",\n "rightPlan": [1],\n "password": "123456"\n }\n}"
+},
+"url": {
+"raw": "http://192.168.1.226/ISAPI/AccessControl/UserInfo/SetUp
+",
+"protocol": "http",
+"host": ["192.168.1.226"],
+"path": ["ISAPI", "AccessControl", "UserInfo", "SetUp"]
+},
+"description": "Mendaftarkan visitor baru dengan nomor, nama, dan password."
+}
+},
+{
+"name": "2️⃣ Upload Face Image (pictureUpload)",
+"request": {
+"method": "POST",
+"header": [
+{
+"key": "Content-Type",
+"value": "multipart/form-data"
+}
+],
+"body": {
+"mode": "formdata",
+"formdata": [
+{
+"key": "PictureUploadData",
+"type": "text",
+"contentType": "application/xml",
+"value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<PictureUploadData version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">\n
+ <FDID>1</FDID>\n <faceLibType>ordinary</faceLibType>\n <FPID>1112</FPID>\n <name>Rian Test 11</name>\n <customInfo>Visitor SelfReg</customInfo>\n <faceAppendData>\n <employeeNo>1112</employeeNo>\n </faceAppendData>\n</PictureUploadData>"
+},
+{
+"key": "FaceData",
+"type": "file",
+"contentType": "image/jpeg",
+"src": ["C:/sct/monolith_vms/media/face_images/visitor_443922.jpg"]
+}
+]
+},
+"url": {
+"raw": "http://192.168.1.226/ISAPI/Intelligent/FDLib/pictureUpload
+",
+"protocol": "http",
+"host": ["192.168.1.226"],
+"path": ["ISAPI", "Intelligent", "FDLib", "pictureUpload"]
+},
+"description": "Mengunggah wajah visitor ke face library via multipart form-data (PictureUploadData + FaceData)."
+}
+},
+{
+"name": "3️⃣ Remote Open Door (Optional)",
+"request": {
+"method": "PUT",
+"header": [
+{
+"key": "Content-Type",
+"value": "application/xml"
+}
+],
+"body": {
+"mode": "raw",
+"raw": "<RemoteControlDoor version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">\n
+ <cmd>open</cmd>\n</RemoteControlDoor>"
+},
+"url": {
+"raw": "http://192.168.1.226/ISAPI/AccessControl/RemoteControl/door/1
+",
+"protocol": "http",
+"host": ["192.168.1.226"],
+"path": ["ISAPI", "AccessControl", "RemoteControl", "door", "1"]
+},
+"description": "Membuka pintu 1 secara remote untuk testing hak akses visitor."
+}
+}
+]
+}

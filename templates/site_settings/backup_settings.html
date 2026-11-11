@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Auto Backup & Recovery - Settings{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+  <div class="glassmorphism rounded-xl p-6">
+    <h1 class="text-3xl font-bold mb-2">Auto Backup & Recovery</h1>
+    <p class="text-gray-600 dark:text-gray-400">Configure automated backups using Windows Task Scheduler (Option A). Backups are OFF by default and nothing runs unless you enable it and set up the OS task.</p>
+  </div>
+
+  <form method="post" class="glassmorphism rounded-xl p-6 space-y-6">
+    {% csrf_token %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="flex items-center space-x-3">
+          <input type="checkbox" name="enable_auto_backup" {% if config.enable_auto_backup %}checked{% endif %} class="h-5 w-5 text-blue-600 rounded" />
+          <span class="text-gray-900 dark:text-white font-medium">Enable Auto Backup</span>
+        </label>
+        <p class="text-sm text-gray-500 mt-1">Default is OFF. You must also configure a Windows Scheduled Task to execute the backup command.</p>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Destination Folder</label>
+        <input type="text" name="backup_output_dir" value="{{ config.backup_output_dir|default:'backups' }}" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50" placeholder="e.g. C:\\monolith_vms\\backups" />
+        <p class="text-xs text-gray-500 mt-1">Ensure the app user has write permission to this folder.</p>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Frequency</label>
+        <select name="backup_frequency" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50">
+          <option value="daily" {% if config.backup_frequency == 'daily' %}selected{% endif %}>Daily</option>
+          <option value="weekly" {% if config.backup_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+          <option value="monthly" {% if config.backup_frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Time of Day</label>
+        <input type="time" name="backup_time" value="{{ config.backup_time|time:'H:i'|default:'02:00' }}" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Retention (days)</label>
+        <input type="number" min="1" name="backup_keep_days" value="{{ config.backup_keep_days|default:30 }}" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50" />
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Settings</button>
+      <button type="submit" name="run_now" value="1" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Run Backup Now</button>
+      <a href="{% url 'site_settings:settings_dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Settings
+        </a>
+    </div>
+  </form>
+
+  <div class="glassmorphism rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-2">How to enable auto backup</h2>
+    
+    <!-- Linux/Mac -->
+    <h3 class="text-lg font-medium mt-4 mb-2">Linux / Mac (cron)</h3>
+    <pre class="bg-gray-900 text-green-200 text-sm p-4 rounded overflow-x-auto"><code># Edit crontab
+crontab -e
+
+# Add this line (daily at {{ config.backup_time|time:'H:i'|default:'02:00' }}):
+{{ config.backup_time|time:'M' }} {{ config.backup_time|time:'H' }} * * * cd {{ BASE_DIR }} && .venv/bin/python manage.py backup_site --site-id 1 --output-dir "{{ config.backup_output_dir|default:'backups' }}" >> logs/backup.log 2>&1</code></pre>
+    
+    <!-- Windows -->
+    <h3 class="text-lg font-medium mt-4 mb-2">Windows (Task Scheduler)</h3>
+    <pre class="bg-gray-900 text-green-200 text-sm p-4 rounded overflow-x-auto"><code>schtasks /Create /TN "VMS Daily Backup (Site 1)" /SC DAILY /ST {{ config.backup_time|time:'H:i'|default:'02:00' }} /TR "&quot;{{ BASE_DIR }}\.venv\Scripts\python.exe&quot; &quot;{{ BASE_DIR }}\manage.py&quot; backup_site --site-id 1 --output-dir &quot;{{ config.backup_output_dir|default:'backups' }}&quot;" /F</code></pre>
+    
+    <p class="text-sm text-gray-500 mt-2">Adjust the site ID and paths as needed. This application stores your preferences and can run backups on demand; scheduling is done via the OS.</p>
+  </div>
+
+  <div class="glassmorphism rounded-xl p-6">
+    <h2 class="text-xl font-semibold mb-4">Restore from Backup</h2>
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium mb-1">Select backup JSON file</label>
+        <input type="file" name="restore_file" accept="application/json,.json" class="w-full text-sm" />
+      </div>
+      <label class="inline-flex items-center space-x-2">
+        <input type="checkbox" name="clear_before_restore" class="h-4 w-4 text-red-600" />
+        <span class="text-sm text-gray-700 dark:text-gray-300">Clear existing Visitors and Categories for this site before restore</span>
+      </label>
+      <div class="flex items-center space-x-3">
+        <button type="submit" name="restore" value="1" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Restore</button>
+        {% if existing_backups %}
+          <span class="text-sm text-gray-500">Or pick a recent backup:</span>
+          <div class="flex flex-wrap gap-2">
+            {% for fname in existing_backups %}
+              <button type="submit" name="restore" value="1" onclick="document.getElementById('quick-file').value='{{ fname }}';" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-sm">{{ fname }}</button>
+              <a href="{% url 'site_settings:download_backup' %}?name={{ fname|urlencode }}" class="text-blue-600 hover:underline text-sm" download>Download</a>
+            {% endfor %}
+          </div>
+          <input type="hidden" id="quick-file" name="quick_file_name" />
+        {% endif %}
+      </div>
+    </form>
+    <p class="text-xs text-gray-500 mt-2">Note: Restore replaces or updates records for this site only. Users are global and not modified.</p>
+  </div>
+</div>
+{% endblock %}

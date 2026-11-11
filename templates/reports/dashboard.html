@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Reports Dashboard" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="glassmorphism rounded-xl p-6">
+        <h1 class="text-3xl font-bold mb-2">{% trans "Reports Dashboard" %}</h1>
+        <p class="text-gray-600 dark:text-gray-400">{% trans "Generate and export comprehensive reports for your visitor management system." %}</p>
+    </div>
+    
+    <!-- Report Types -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Visitor Reports -->
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-blue-500 bg-opacity-20 mr-4">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-blue-800 dark:text-blue-200">{% trans "Visitor Reports" %}</h3>
+                    <p class="text-sm text-blue-600 dark:text-blue-300">{% trans "Detailed visitor data and statistics" %}</p>
+                </div>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">{% trans "Generate comprehensive reports of all visitors with advanced filtering options. Export to CSV, Excel, or PDF formats." %}</p>
+            <div class="space-y-2">
+                <a href="{% url 'reports:visitor_report' %}" class="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center">
+                    {% trans "Generate Report" %}
+                </a>
+                <div class="flex space-x-2">
+                    <a href="{% url 'reports:export_csv' %}" class="flex-1 px-3 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors text-center">
+                        {% trans "CSV" %}
+                    </a>
+                    <a href="{% url 'reports:export_excel' %}" class="flex-1 px-3 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors text-center">
+                        {% trans "Excel" %}
+                    </a>
+                    <a href="{% url 'reports:export_pdf' %}" class="flex-1 px-3 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors text-center">
+                        {% trans "PDF" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analytics Reports -->
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-green-500 bg-opacity-20 mr-4">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-green-800 dark:text-green-200">{% trans "Analytics Reports" %}</h3>
+                    <p class="text-sm text-green-600 dark:text-green-300">{% trans "Statistical analysis and trends" %}</p>
+                </div>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">{% trans "View visitor trends, category breakdowns, and site statistics with interactive charts and graphs." %}</p>
+            <a href="{% url 'reports:analytics' %}" class="block w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-center">
+                {% trans "View Analytics" %}
+            </a>
+        </div>
+        
+        <!-- Occurrence Reports -->
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-cyan-500 bg-opacity-20 mr-4">
+                    <svg class="w-8 h-8 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-cyan-800 dark:text-cyan-200">{% trans "Occurrence Reports" %}</h3>
+                    <p class="text-sm text-cyan-600 dark:text-cyan-300">{% trans "DOB and Incident logs" %}</p>
+                </div>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">{% trans "Generate and export Daily Occurrence Book logs including patrols, incidents, and key handovers." %}</p>
+            <div class="space-y-2">
+                <a href="{% url 'reports:occurrence_report' %}" class="block w-full px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors text-center">
+                    {% trans "View Report" %}
+                </a>
+                <div class="flex space-x-2">
+                    <a href="{% url 'reports:export_occurrences_csv' %}" class="flex-1 px-3 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors text-center">
+                        {% trans "CSV" %}
+                    </a>
+                    <a href="{% url 'reports:export_occurrences_excel' %}" class="flex-1 px-3 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors text-center">
+                        {% trans "Excel" %}
+                    </a>
+                    <a href="{% url 'reports:export_occurrences_pdf' %}" class="flex-1 px-3 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-800 transition-colors text-center">
+                        {% trans "PDF" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Vehicle Reports -->
+        {% if not user.profile.is_security_officer %}
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-orange-500 bg-opacity-20 mr-4">
+                    <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0M15 17a2 2 0 104 0"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-orange-800 dark:text-orange-200">{% trans "Vehicle Reports" %}</h3>
+                    <p class="text-sm text-orange-600 dark:text-orange-300">{% trans "ALPR whitelist and vehicle analytics" %}</p>
+                </div>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">{% trans "Track vehicle whitelist usage, ALPR camera sync status, plate recognition analytics, and vehicle access patterns." %}</p>
+            <a href="{% url 'reports:vehicle_report' %}" class="block w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-center">
+                {% trans "View Vehicle Reports" %}
+            </a>
+        </div>
+        
+        <!-- Pre-Registration Reports -->
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-purple-500 bg-opacity-20 mr-4">
+                    <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-purple-800 dark:text-purple-200">{% trans "Pre-Registration Reports" %}</h3>
+                    <p class="text-sm text-purple-600 dark:text-purple-300">{% trans "Pre-registered visitor tracking" %}</p>
+                </div>
+            </div>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">{% trans "Track pre-registration usage, conversion rates, and visitor verification statistics." %}</p>
+            <a href="{% url 'reports:pre_registration_reports' %}" class="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-center">
+                {% trans "View Pre-Registrations" %}
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Report Features -->
+    <div class="glassmorphism rounded-xl p-6">
+        <h2 class="text-xl font-semibold mb-4">{% trans "Report Features" %}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="font-semibold text-blue-600 dark:text-blue-400 mb-2">{% trans "Advanced Filtering" %}</h3>
+                <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• {% trans "Filter by date range, site, and category" %}</li>
+                    <li>• {% trans "Search by visitor name, company, or contact" %}</li>
+                    <li>• {% trans "Filter by check-in/check-out status" %}</li>
+                    <li>• {% trans "Advanced search capabilities" %}</li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="font-semibold text-green-600 dark:text-green-400 mb-2">{% trans "Export Options" %}</h3>
+                <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• {% trans "CSV format for data analysis" %}</li>
+                    <li>• {% trans "Excel format with formatting" %}</li>
+                    <li>• {% trans "PDF format for printing" %}</li>
+                    <li>• {% trans "Real-time data export" %}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    {% if user_role == 'admin' %}
+    <!-- Admin Only Section -->
+    <div class="glassmorphism rounded-xl p-6 border-l-4 border-red-500">
+        <h2 class="text-xl font-semibold mb-4 text-red-600 dark:text-red-400">{% trans "Administrator Features" %}</h2>
+        <p class="text-gray-600 dark:text-gray-400 mb-4">{% trans "As an administrator, you have access to all sites and comprehensive reporting capabilities." %}</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <h4 class="font-semibold text-red-800 dark:text-red-200">{% trans "Multi-Site Reports" %}</h4>
+                <p class="text-sm text-red-600 dark:text-red-300">{% trans "Generate reports across all sites" %}</p>
+            </div>
+            <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <h4 class="font-semibold text-red-800 dark:text-red-200">{% trans "User Activity" %}</h4>
+                <p class="text-sm text-red-600 dark:text-red-300">{% trans "Track user actions and system usage" %}</p>
+            </div>
+            <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <h4 class="font-semibold text-red-800 dark:text-red-200">{% trans "System Analytics" %}</h4>
+                <p class="text-sm text-red-600 dark:text-red-300">{% trans "Comprehensive system performance data" %}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,625 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Officer Quick Guide - VMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Quick Guide Aesthetics */
+    .guide-header {
+        background: linear-gradient(135deg, rgba(30, 58, 138, 0.85) 0%, rgba(30, 64, 175, 0.85) 50%, rgba(17, 24, 39, 0.95) 100%);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        border-radius: 24px;
+        padding: 2.5rem 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    }
+    
+    .toc-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        padding: 1.5rem;
+        position: sticky;
+        top: 6rem;
+    }
+    
+    .dark .toc-card {
+        background: rgba(15, 23, 42, 0.75);
+        border-color: rgba(51, 65, 85, 0.8);
+    }
+    
+    .toc-link {
+        display: flex;
+        align-items: center;
+        padding: 0.6rem 0.85rem;
+        border-radius: 10px;
+        color: #475569;
+        font-weight: 500;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    
+    .dark .toc-link {
+        color: #94a3b8;
+    }
+    
+    .toc-link:hover, .toc-link.active {
+        background: rgba(59, 130, 246, 0.12);
+        color: #2563eb;
+        transform: translateX(4px);
+    }
+    
+    .dark .toc-link:hover, .dark .toc-link.active {
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+    }
+    
+    .step-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .dark .step-card {
+        background: rgba(15, 23, 42, 0.8);
+        border-color: rgba(51, 65, 85, 0.8);
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+    }
+    
+    .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+    
+    .screenshot-container {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(203, 213, 225, 0.6);
+        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+        margin-top: 1.25rem;
+        margin-bottom: 1.25rem;
+        background: #0f172a;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .dark .screenshot-container {
+        border-color: rgba(51, 65, 85, 0.8);
+        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.4);
+    }
+    
+    .screenshot-container:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 30px -4px rgba(59, 130, 246, 0.25);
+    }
+    
+    .screenshot-img {
+        width: 100%;
+        height auto;
+        display: block;
+    }
+    
+    .tip-box {
+        background: rgba(59, 130, 246, 0.08);
+        border-left: 4px solid #3b82f6;
+        border-radius: 0 12px 12px 0;
+        padding: 1rem 1.25rem;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .dark .tip-box {
+        background: rgba(59, 130, 246, 0.15);
+    }
+
+    .important-box {
+        background: rgba(245, 158, 11, 0.08);
+        border-left: 4px solid #f59e0b;
+        border-radius: 0 12px 12px 0;
+        padding: 1rem 1.25rem;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .dark .important-box {
+        background: rgba(245, 158, 11, 0.15);
+    }
+
+    .sim-data-card {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.05) 100%);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .badge-officer {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Top Action / Back Button -->
+    <div class="mb-4 flex items-center justify-between">
+        <a href="{% url 'login' %}" class="inline-flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Sign In
+        </a>
+        <span class="badge-officer">Role: Security Officer</span>
+    </div>
+
+    <!-- Hero Header -->
+    <div class="guide-header text-white text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+            <div class="inline-flex items-center space-x-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-3">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+                <span>Security Officer Standard Operating Guide</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">VMS Officer Quick Guide</h1>
+            <p class="text-blue-100 text-sm md:text-base max-w-2xl">
+                Official step-by-step procedure manual for Security Officers. Features real operational workflow simulations using Singapore client sample data for walk-in registration, pass generation, and checkbox exit check-outs.
+            </p>
+        </div>
+        <div class="flex-shrink-0 bg-white/10 p-4 rounded-2xl border border-white/20 text-center min-w-[200px]">
+            <p class="text-xs uppercase tracking-wider text-blue-200 font-medium">Default Credentials</p>
+            <p class="text-lg font-bold text-white mt-1">Username: <span class="text-amber-300">officer1</span></p>
+            <p class="text-xs text-blue-200 mt-1">Password: <span class="font-mono bg-white/20 px-2 py-0.5 rounded text-white">123456</span></p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <!-- Sidebar Navigation (TOC) -->
+        <div class="lg:col-span-1">
+            <div class="toc-card">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 px-2">Table of Contents</h3>
+                <nav class="space-y-1">
+                    <a href="#step-1" class="toc-link active">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">01</span>
+                        Sign In & Authentication
+                    </a>
+                    <a href="#step-2" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">02</span>
+                        Officer Dashboard Overview
+                    </a>
+                    <a href="#step-3" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">03</span>
+                        <div>
+                            <span>Walk-In Visitor Registration</span>
+                            <span class="block text-[10px] text-gray-400 font-normal">IC No: Last 4 digits only</span>
+                        </div>
+                    </a>
+                    <a href="#step-4" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">04</span>
+                        Invited Visitor Verification
+                    </a>
+                    <a href="#step-5" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">05</span>
+                        <div>
+                            <span>Active Visitors & Check-Out</span>
+                            <span class="block text-[10px] text-gray-400 font-normal">Select checkbox & Check Out</span>
+                        </div>
+                    </a>
+                    <a href="#step-6" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">06</span>
+                        Visitor Logs & Reports
+                    </a>
+                    <a href="#step-7" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">07</span>
+                        Analytics & Peak Hours
+                    </a>
+                    <a href="#step-8" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-blue-500 mr-2">08</span>
+                        Kiosk Self-Registration Assist
+                    </a>
+                    <a href="#step-9" class="toc-link">
+                        <span class="w-5 font-bold text-xs text-purple-500 mr-2">09</span>
+                        <div>
+                            <span>Daily Occurrence Book (DOB)</span>
+                            <span class="block text-[10px] text-gray-400 font-normal">Patrol, Incident & Key Log</span>
+                        </div>
+                    </a>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Guide Content -->
+        <div class="lg:col-span-3 space-y-8">
+
+            <!-- Step 1: Sign In -->
+            <section id="step-1" class="step-card">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">1</span>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Sign In & Officer Authentication</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-3">
+                    To access the Security Officer Portal, navigate to the main login screen and enter your assigned Security Officer credentials.
+                </p>
+                
+                <div class="bg-gray-100 dark:bg-gray-800/60 p-4 rounded-xl space-y-2 mb-4 text-xs font-mono">
+                    <div class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
+                        <span class="text-gray-500 dark:text-gray-400">Portal URL:</span>
+                        <span class="text-blue-600 dark:text-blue-400 font-semibold">http://127.0.0.1:8004/login/</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
+                        <span class="text-gray-500 dark:text-gray-400">Officer Username:</span>
+                        <span class="text-green-600 dark:text-green-400 font-semibold">officer1</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500 dark:text-gray-400">Default Password:</span>
+                        <span class="text-amber-600 dark:text-amber-400 font-semibold">123456</span>
+                    </div>
+                </div>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/01_login_page.png' %}" alt="Sign In Page" class="screenshot-img">
+                </div>
+
+                <div class="tip-box text-blue-800 dark:text-blue-200">
+                    <strong>Pro Tip:</strong> Toggle Light/Dark mode using the theme button on the top right corner of the login card.
+                </div>
+            </section>
+
+            <!-- Step 2: Officer Dashboard -->
+            <section id="step-2" class="step-card">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">2</span>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Security Officer Dashboard Overview</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-3">
+                    Upon logging in, the Officer Dashboard serves as the central command screen. It gives real-time visibility over current facility activity and quick access to core guardhouse actions.
+                </p>
+
+                <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-300 space-y-2 mb-4">
+                    <li><strong>Real-time Counters:</strong> View total visitors today, contractors, deliveries, and currently active guests on site.</li>
+                    <li><strong>Register Walk-In Visitor Form:</strong> Form on the left side of the dashboard for immediate walk-in registration.</li>
+                    <li><strong>Active Visitors List:</strong> Right panel showing all currently checked-in guests with checkbox selection and exit controls.</li>
+                </ul>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/02_dashboard.png' %}" alt="Officer Dashboard" class="screenshot-img">
+                </div>
+            </section>
+
+            <!-- Step 3: Registering Walk-In Visitors (REAL SINGAPORE DATA SIMULATION) -->
+            <section id="step-3" class="step-card border-l-4 border-l-blue-500">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">3</span>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Registering Walk-In Visitors (Primary Guardhouse Duty)</h2>
+                        <p class="text-xs text-blue-600 dark:text-blue-400 font-medium">Field IC No: Enter last 4 digits only (e.g. S****5678B)</p>
+                    </div>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4">
+                    Registering unannounced walk-in guests, contractors, or delivery personnel is the primary duty of the Security Officer at the entrance post. Below is the real operational workflow simulated using Singapore client sample data.
+                </p>
+
+                <!-- Singapore Sample Data Card -->
+                <div class="sim-data-card">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-green-900 dark:text-green-300 text-sm flex items-center">
+                            <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Real Singapore Client Sample Data Input
+                        </h4>
+                        <span class="bg-green-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded">Verified Live Entry</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                        <div><span class="text-gray-500">Full Name:</span> <strong class="text-gray-800 dark:text-gray-200">Tan Wei Ming</strong></div>
+                        <div><span class="text-gray-500">IC No (Last 4):</span> <strong class="text-blue-600 dark:text-blue-400">5678</strong></div>
+                        <div><span class="text-gray-500">Contact:</span> <strong class="text-gray-800 dark:text-gray-200">+65 9123 4567</strong></div>
+                        <div><span class="text-gray-500">Vehicle:</span> <strong class="text-amber-600 dark:text-amber-400">SKV 8888 Z</strong></div>
+                        <div><span class="text-gray-500">Company:</span> <strong class="text-gray-800 dark:text-gray-200">Keppel Logistics Pte Ltd</strong></div>
+                        <div><span class="text-gray-500">Destination:</span> <strong class="text-gray-800 dark:text-gray-200">Tower 2, Level 15</strong></div>
+                    </div>
+                </div>
+
+                <!-- Phase 1: Input -->
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Phase 1: Input Visitor Details into Registration Panel</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Enter the visitor's information. For <strong>IC No. / NIK</strong>, enter only the <strong>last 4 digits</strong> (e.g. <span class="font-mono text-blue-600 font-bold">5678</span>) for compliance with privacy regulations.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/08_walkin_form_filled.png' %}" alt="Form Filled with Singapore Visitor Data" class="screenshot-img">
+                </div>
+
+                <!-- Phase 2: Form Submission & Pass Generation -->
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 mt-6">Phase 2: Form Submission & Auto Pass Generation</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Upon clicking <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-semibold">Register Visitor</span>, the system registers the visitor and automatically routes to the **Digital Visitor Pass** generation page (Pass No: <span class="font-mono font-bold text-green-600">VIS-1623</span>) with printable QR Code.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/09_print_visitor_pass.png' %}" alt="Generated Visitor Digital Pass" class="screenshot-img">
+                </div>
+
+                <!-- Phase 3: Real Dashboard Table Aggregation -->
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 mt-6">Phase 3: Live Aggregation in Dashboard Visitor List</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Returning to the Officer Dashboard confirms that <strong>Tan Wei Ming</strong> is now aggregated live at the top of the <strong>Visitor List</strong> table with <span class="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-0.5 rounded text-xs font-semibold">Active Status</span>, entry timestamp, and pass number.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/09_walkin_success_active.png' %}" alt="Live Dashboard Table showing Tan Wei Ming Active" class="screenshot-img">
+                </div>
+            </section>
+
+            <!-- Step 4: Invited Visitor Verification -->
+            <section id="step-4" class="step-card">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">4</span>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Invited Visitor Verification (QR Code / PIN Check-In)</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-3">
+                    The <strong>Verify Visitor</strong> page is specifically designed to verify guests who have been pre-invited by <strong>Management, Admin, or Residents</strong>. Pre-invited visitors already possess a unique <strong>QR Code or PIN pass</strong> sent to their phone/email prior to arrival.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="bg-blue-50 dark:bg-blue-950/40 p-3.5 rounded-xl border border-blue-100 dark:border-blue-900/50">
+                        <h4 class="font-semibold text-blue-900 dark:text-blue-300 text-sm mb-1">Method A: Scan QR Code</h4>
+                        <p class="text-xs text-blue-700 dark:text-blue-400">Ask the visitor to present their digital QR pass on their mobile device. Scan it using the gate optical scanner or camera.</p>
+                    </div>
+                    <div class="bg-indigo-50 dark:bg-indigo-950/40 p-3.5 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                        <h4 class="font-semibold text-indigo-900 dark:text-indigo-300 text-sm mb-1">Method B: PIN / Pass Number Lookup</h4>
+                        <p class="text-xs text-indigo-700 dark:text-indigo-400">If the visitor presents a numerical PIN or Pass Number (e.g. VIS-1002), type it into the verification bar and press Enter.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/03_verify_visitor.png' %}" alt="Verify Invited Visitor" class="screenshot-img">
+                </div>
+
+                <div class="tip-box text-blue-800 dark:text-blue-200">
+                    <strong>Instant Validation:</strong> If the QR code or PIN is valid, the system displays a green confirmation, verifies destination details, and registers instant check-in.
+                </div>
+            </section>
+
+            <!-- Step 5: Checkbox Check-Out Workflow (EXACT USER SPECIFIED WORKFLOW) -->
+            <section id="step-5" class="step-card border-l-4 border-l-red-500">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">5</span>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Active Visitors & Checkbox Exit Check-Out Procedure</h2>
+                        <p class="text-xs text-red-600 dark:text-red-400 font-medium">Standard Guardhouse Check-Out Method via Dashboard Table</p>
+                    </div>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4">
+                    When visitors depart from the facility, Security Officers process check-outs directly from the <strong>Visitor List</strong> on the Dashboard. Follow these exact 3 steps:
+                </p>
+
+                <!-- Checkbox Procedure Steps -->
+                <div class="bg-red-50 dark:bg-red-950/30 p-4 rounded-xl border border-red-100 dark:border-red-900/50 mb-4 space-y-3">
+                    <div class="flex items-start space-x-3 text-xs">
+                        <span class="bg-red-600 text-white font-bold px-2 py-0.5 rounded flex-shrink-0">Step 1</span>
+                        <div>
+                            <strong class="text-gray-900 dark:text-gray-100">Locate Visitor in Dashboard Table:</strong>
+                            <p class="text-gray-600 dark:text-gray-400">Locate the departing visitor's name (e.g. <span class="font-bold text-gray-800 dark:text-gray-200">Desmond Lim</span>) in the Active Visitor List table on the Dashboard.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3 text-xs">
+                        <span class="bg-red-600 text-white font-bold px-2 py-0.5 rounded flex-shrink-0">Step 2</span>
+                        <div>
+                            <strong class="text-gray-900 dark:text-gray-100">Tick Selection Checkbox:</strong>
+                            <p class="text-gray-600 dark:text-gray-400">Click the <strong>checkbox</strong> box located on the left side beside the visitor's name. Ticking the checkbox triggers the action bar showing <span class="text-blue-600 font-semibold">1 visitor selected</span>.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3 text-xs">
+                        <span class="bg-red-600 text-white font-bold px-2 py-0.5 rounded flex-shrink-0">Step 3</span>
+                        <div>
+                            <strong class="text-gray-900 dark:text-gray-100">Click 'Check Out Selected' Button:</strong>
+                            <p class="text-gray-600 dark:text-gray-400">Click the red <span class="bg-red-600 text-white px-2 py-0.5 rounded font-semibold text-[10px]">Check Out Selected</span> button on the action bar to confirm check-out and record departure time.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Phase A: Ticking Checkbox Beside Visitor Name (Action Bar Appears)</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Selecting the checkbox next to <span class="font-semibold text-gray-800 dark:text-gray-200">Desmond Lim</span> activates the blue action bar with the red <span class="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-semibold">Check Out Selected</span> button.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/10_walkin_checkout_checkbox.png' %}" alt="Ticking Checkbox next to Visitor Name and Action Bar" class="screenshot-img">
+                </div>
+
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 mt-6">Phase B: Completed Check-Out Status</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    After clicking Check Out Selected, the visitor's status updates to <span class="bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 px-2 py-0.5 rounded text-xs font-semibold">Checked Out</span> with departure time archived into official logs.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/10_walkin_checkout_done.png' %}" alt="Completed Checked Out Status in Table" class="screenshot-img">
+                </div>
+
+                <div class="tip-box text-blue-800 dark:text-blue-200">
+                    <strong>Batch Check-Out Support:</strong> You can tick multiple checkboxes at once to process exit check-out for multiple visitors simultaneously.
+                </div>
+            </section>
+
+            <!-- Step 6: Reports -->
+            <section id="step-6" class="step-card">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">6</span>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Visitor Logs & Shift Reports</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-3">
+                    Security Officers can review complete entry/exit logs and export daily shift records via <strong>Reports > Visitor Logs</strong>.
+                </p>
+
+                <div class="bg-gray-50 dark:bg-gray-800/40 p-3.5 rounded-xl mb-4 text-xs space-y-1.5">
+                    <p><strong>Filter Logs:</strong> Search by date range, visitor name, vehicle plate, or category.</p>
+                    <p><strong>Export Files:</strong> Export logs to <span class="text-green-600 font-semibold">CSV</span> or <span class="text-emerald-600 font-semibold">Excel</span> format for supervisor reporting.</p>
+                </div>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/05_visitor_reports.png' %}" alt="Visitor Reports" class="screenshot-img">
+                </div>
+            </section>
+
+            <!-- Step 7: Analytics -->
+            <section id="step-7" class="step-card">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">7</span>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Analytics & Peak Hours Monitoring</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-3">
+                    The <strong>Analytics Report</strong> screen displays operational statistics including category distribution and Peak Hours entry graphs to assist post staffing.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/06_analytics_report.png' %}" alt="Analytics Report" class="screenshot-img">
+                </div>
+            </section>
+
+            <!-- Step 8: Kiosk Self-Registration Assist -->
+            <section id="step-8" class="step-card">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number">8</span>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Kiosk Self-Registration Assist</h2>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-3">
+                    If visitors use self-service kiosks at the lobby or gate, Officers can guide guests through self-check-in on the terminal.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/07_self_register.png' %}" alt="Kiosk Self Registration" class="screenshot-img">
+                </div>
+            </section>
+
+            <!-- Step 9: Daily Occurrence Book (DOB) -->
+            <section id="step-9" class="step-card border-l-4 border-l-purple-500">
+                <div class="flex items-center space-x-3 mb-4">
+                    <span class="step-number" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">9</span>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Daily Occurrence Book (DOB) & Shift Handovers</h2>
+                        <p class="text-xs text-purple-600 dark:text-purple-400 font-medium">Digital Patrol, Facility Incident & Key Management Logging</p>
+                    </div>
+                </div>
+                <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4">
+                    The <strong>Occurrence Book</strong> tab provides a digital Daily Occurrence Book (DOB) for security officers to record routine floor patrols, facility incidents, key issuances, and shift handovers with full audit trails.
+                </p>
+
+                <!-- Key Features & Workflow -->
+                <div class="bg-purple-50 dark:bg-purple-950/30 p-4 rounded-xl border border-purple-100 dark:border-purple-900/50 mb-4 space-y-3">
+                    <div class="flex items-start space-x-3 text-xs">
+                        <span class="bg-purple-600 text-white font-bold px-2 py-0.5 rounded flex-shrink-0">Step 1</span>
+                        <div>
+                            <strong class="text-gray-900 dark:text-gray-100">Switch to Occurrence Book Tab:</strong>
+                            <p class="text-gray-600 dark:text-gray-400">Click the <strong>Occurrence Book</strong> tab located beside the Visitor List on the main dashboard to view all recorded logs.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3 text-xs">
+                        <span class="bg-purple-600 text-white font-bold px-2 py-0.5 rounded flex-shrink-0">Step 2</span>
+                        <div>
+                            <strong class="text-gray-900 dark:text-gray-100">Click '+ Log New Occurrence':</strong>
+                            <p class="text-gray-600 dark:text-gray-400">Open the entry modal to record category (Patrol, Incident, Key Management, Note), severity level, location, title, and detailed notes.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3 text-xs">
+                        <span class="bg-purple-600 text-white font-bold px-2 py-0.5 rounded flex-shrink-0">Step 3</span>
+                        <div>
+                            <strong class="text-gray-900 dark:text-gray-100">Duty Officer Attribution & Submission:</strong>
+                            <p class="text-gray-600 dark:text-gray-400">Upon clicking Submit, select whether the log is entered by the logged-in user or type an officer name. Historical officer names auto-complete automatically.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Phase 1: Daily Occurrence Logs Table View</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Displays chronological entries with category badges, severity indicators (Normal, Warning, Critical), duty officer tags, and photo attachments.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/11_occurrence_book_tab.png' %}" alt="Daily Occurrence Book Logs Table" class="screenshot-img">
+                </div>
+
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1 mt-6">Phase 2: Log New Occurrence Modal Form & Verification</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Security officers enter event details and verify officer attribution before saving to the central audit record.
+                </p>
+
+                <div class="screenshot-container">
+                    <img src="{% static 'screenshots/12_occurrence_modal.png' %}" alt="Log New Occurrence Modal Form" class="screenshot-img">
+                </div>
+
+                <div class="tip-box text-purple-900 dark:text-purple-200">
+                    <strong>Audit Integrity:</strong> Every log entry links both the Duty Officer name and the logged-in account username along with an unalterable timestamp for operational compliance.
+                </div>
+            </section>
+
+            <!-- Back to Login Bottom CTA -->
+            <div class="pt-4 pb-8 text-center">
+                <a href="{% url 'login' %}" class="inline-flex items-center justify-center px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 transform hover:-translate-y-0.5">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                    </svg>
+                    Return to Sign In Page
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sections = document.querySelectorAll('section[id^="step-"]');
+        const tocLinks = document.querySelectorAll('.toc-link');
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '-10% 0px -60% 0px',
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    tocLinks.forEach(link => {
+                        if (link.getAttribute('href') === `#${id}`) {
+                            link.classList.add('active');
+                        } else {
+                            link.classList.remove('active');
+                        }
+                    });
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => observer.observe(section));
+    });
+</script>
+{% endblock %}

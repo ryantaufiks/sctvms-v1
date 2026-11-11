@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}VMS - Visitor Management System{% endblock %}</title>
+    <!-- Google Fonts - Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            * {
+                font-family: 'Poppins', sans-serif;
+            }
+        }
+        @layer components {
+            .glassmorphism {
+                @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-lg border border-white/20 dark:border-gray-800/20 shadow-lg;
+            }
+            .glassmorphism-card {
+                @apply glassmorphism rounded-xl p-6;
+            }
+            .btn-primary {
+                @apply px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all;
+            }
+            .btn-secondary {
+                @apply px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-all;
+            }
+            .form-input {
+                @apply w-full px-4 py-2 bg-white/50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+            }
+            .form-label {
+                @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+            }
+            .notification {
+                @apply transition-all duration-300 ease-in-out;
+            }
+            .notification:hover {
+                @apply transform scale-[1.02];
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">
+    <div class="flex flex-col min-h-screen">
+        {% if user.is_authenticated %}
+        <header class="glassmorphism sticky top-0 z-50">
+            <div class="container mx-auto px-4 py-3">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        {% load site_tags %}
+                        {% get_site_logo as site_logo %}
+                        {% if site_logo and site_logo.logo_light or site_logo.logo_dark %}
+                            <a href="{% url 'dashboard:index' %}" class="flex items-center">
+                                <!-- Light Theme Logo -->
+                                {% if site_logo.logo_light %}
+                                    <img src="{{ site_logo.logo_light.url }}" alt="{{ site_logo.site.name }}" class="h-10 w-auto block dark:hidden">
+                                {% endif %}
+                                <!-- Dark Theme Logo -->
+                                {% if site_logo.logo_dark %}
+                                    <img src="{{ site_logo.logo_dark.url }}" alt="{{ site_logo.site.name }}" class="h-10 w-auto hidden dark:block">
+                                {% endif %}
+                            </a>
+                        {% elif site_logo %}
+                            <a href="{% url 'dashboard:index' %}" class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ site_logo.site.name }}</a>
+                        {% else %}
+                            <a href="{% url 'dashboard:index' %}" class="text-2xl font-bold text-primary-600 dark:text-primary-400">VMS</a>
+                        {% endif %}
+                        <!-- Desktop Navigation -->
+                        <nav class="hidden md:flex space-x-4">
+                            <a href="{% url 'dashboard:index' %}" class="px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Dashboard">Dashboard</a>
+                            {% if not user.profile.is_security_officer %}
+                            <a href="{% url 'visitors:pre_register' %}" class="px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Pre-Registration">Pre-Registration</a>
+                            {% endif %}
+
+                            {% if user.profile.is_security_officer %}
+                            <a href="{% url 'visitors:verify' %}" class="px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Verify Visitor">Verify Visitor</a>
+                            {% endif %}
+                            {% if user.profile.role == 'admin' %}
+                             <a href="{% url 'user_management:user_list' %}" class="px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="User Management">User Management</a>
+                            {% endif %}
+                            {% if user.profile.role == 'admin' %}
+                            <a href="{% url 'site_settings:settings_dashboard' %}" class="px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Settings">Settings</a>
+                            {% endif %}
+
+                             <a href="{% url 'reports:dashboard' %}" class="px-3 py-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Reports">Reports</a>
+                        </nav>
+                        
+
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- Language Selector -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" class="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+                                </svg>
+                                <span class="text-sm" id="current-language">EN</span>
+                            </button>
+                            <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-40 glassmorphism rounded-lg py-2">
+                                <button onclick="changeLanguage('en')" class="block w-full text-left px-4 py-2 text-sm hover:bg-white/50 dark:hover:bg-gray-800/50">English</button>
+                                <button onclick="changeLanguage('zh')" class="block w-full text-left px-4 py-2 text-sm hover:bg-white/50 dark:hover:bg-gray-800/50">中文 (简体)</button>
+                                <button onclick="changeLanguage('ms')" class="block w-full text-left px-4 py-2 text-sm hover:bg-white/50 dark:hover:bg-gray-800/50">Bahasa Melayu</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Theme Toggle -->
+                        <button id="theme-toggle" class="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50">
+                            <svg id="theme-toggle-dark-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            <svg id="theme-toggle-light-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                        </button>
+                        
+                        <!-- User Menu -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" class="flex items-center space-x-2 focus:outline-none">
+                                <span>{{ user.username }}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 glassmorphism rounded-lg py-2">
+                                <!-- Mobile Navigation Items (visible only on mobile) -->
+                                <div class="md:hidden border-b border-gray-200 dark:border-gray-700 pb-2 mb-2">
+                                    <a href="{% url 'dashboard:index' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Dashboard">Dashboard</a>
+                                    {% if not user.profile.is_security_officer %}
+                                    <a href="{% url 'visitors:pre_register' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Pre-Registration">Pre-Registration</a>
+                                    {% endif %}
+                                    {% if user.profile.is_security_officer %}
+                                    <a href="{% url 'visitors:verify' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Verify Visitor">Verify Visitor</a>
+                                    {% endif %}
+                                    {% if user.profile.role == 'admin' %}
+                                    <a href="{% url 'user_management:user_list' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="User Management">User Management</a>
+                                    {% endif %}
+                                    {% if user.profile.role == 'admin' %}
+                                    <a href="{% url 'site_settings:settings_dashboard' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Settings">Settings</a>
+                                    {% endif %}
+                                    {% if not user.profile.is_security_officer %}
+                                    <a href="{% url 'visitors:whitelist_management' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="ALPR Whitelist">ALPR Whitelist</a>
+                                    {% endif %}
+                                    <a href="{% url 'reports:dashboard' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50" data-translate="Reports">Reports</a>
+                                </div>
+                                <!-- User Account Items -->
+                                <a href="{% url 'accounts:profile' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50">Profile</a>
+                                <a href="{% url 'accounts:logout' %}" class="block px-4 py-2 hover:bg-white/50 dark:hover:bg-gray-800/50">Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+
+            </div>
+        </header>
+        {% endif %}
+
+        <main class="flex-grow container mx-auto px-4 py-8">
+            {% if messages %}
+            <div class="mb-6" id="notifications-container">
+                {% for message in messages %}
+                <div class="notification glassmorphism-card mb-4 relative {% if message.tags == 'success' %}border-green-500/20 text-green-700 dark:text-green-400{% elif message.tags == 'error' %}border-red-500/20 text-red-700 dark:text-red-400{% elif message.tags == 'warning' %}border-yellow-500/20 text-yellow-700 dark:text-yellow-400{% else %}border-blue-500/20 text-blue-700 dark:text-blue-400{% endif %}" data-auto-dismiss="{% if message.tags == 'success' or message.tags == 'info' %}true{% else %}false{% endif %}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 pr-4">
+                            {{ message }}
+                        </div>
+                        <button type="button" class="notification-close flex-shrink-0 ml-2 p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors" onclick="closeNotification(this)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="glassmorphism mt-auto">
+            <div class="container mx-auto px-4 py-6">
+                <div class="text-center">
+                    <p>&copy; {% now "Y" %} Smart City Technologies</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Alpine.js for dropdown functionality -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Theme toggle functionality -->
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        
+        function updateThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            } else {
+                themeToggleDarkIcon.classList.add('hidden');
+                themeToggleLightIcon.classList.remove('hidden');
+            }
+        }
+        
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+                updateThemeIcons();
+            });
+        }
+
+        // Load saved theme
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        // Initialize theme icons
+        updateThemeIcons();
+        
+        // Language switching functionality
+         const translations = {
+             'en': {
+                 // Navigation
+                 'Dashboard': 'Dashboard',
+                 'Pre-Registration': 'Pre-Registration',
+                 'Verify Visitor': 'Verify Visitor',
+                 'User Management': 'User Management',
+                 'Settings': 'Settings',
+                 'Reports': 'Reports',
+                 // Dashboard Content
+                 'Register New Visitor': 'Register New Visitor',
+                 'Visitors Today': 'Visitors Today',
+                 'Contractors Today': 'Contractors Today',
+                 'Deliveries Today': 'Deliveries Today',
+                 'Overtime Visitors': 'Overtime Visitors',
+                 'Active': 'Active',
+                 'Today': 'Today',
+                 'No Visitors Yet': 'No Visitors Yet',
+                 'Register your first visitor using the form on the left.': 'Register your first visitor using the form on the left.',
+                 // Form Fields
+                 'Full Name': 'Full Name',
+                 'Contact Number': 'Contact Number',
+                 'Company': 'Company',
+                 'Category': 'Category',
+                 'Purpose of Visit': 'Purpose of Visit',
+                 'Vehicle Number': 'Vehicle Number',
+                 'Tower': 'Tower',
+                 'Level': 'Level',
+                 'Unit': 'Unit',
+                 'Register Visitor': 'Register Visitor',
+                 // Status
+                  'Checked Out': 'Checked Out',
+                  'Check Out': 'Check Out',
+                  'Check-out': 'Check-out',
+                  'Print Pass': 'Print Pass',
+                  // Bulk Actions
+                  'visitors selected': 'visitors selected',
+                  'Check Out Selected': 'Check Out Selected',
+                  'Clear Selection': 'Clear Selection'
+             },
+             'zh': {
+                 // Navigation
+                 'Dashboard': '仪表板',
+                 'Pre-Registration': '预注册',
+                 'Verify Visitor': '验证访客',
+                 'User Management': '用户管理',
+                 'Settings': '设置',
+                 'Reports': '报告',
+                 // Dashboard Content
+                 'Register New Visitor': '注册新访客',
+                 'Visitors Today': '今日访客',
+                 'Contractors Today': '今日承包商',
+                 'Deliveries Today': '今日送货',
+                 'Overtime Visitors': '超时访客',
+                 'Active': '活跃',
+                 'Today': '今天',
+                 'No Visitors Yet': '暂无访客',
+                 'Register your first visitor using the form on the left.': '请使用左侧表单注册您的第一位访客。',
+                 // Form Fields
+                 'Full Name': '全名',
+                 'Contact Number': '联系电话',
+                 'Company': '公司',
+                 'Category': '类别',
+                 'Purpose of Visit': '访问目的',
+                 'Vehicle Number': '车牌号',
+                 'Tower': '塔楼',
+                 'Level': '楼层',
+                 'Unit': '单元',
+                 'Register Visitor': '注册访客',
+                 // Status
+                  'Checked Out': '已签出',
+                  'Check Out': '签出',
+                  'Check-out': '签出时间',
+                  'Print Pass': '打印通行证',
+                  // Bulk Actions
+                  'visitors selected': '位访客已选择',
+                  'Check Out Selected': '签出所选访客',
+                  'Clear Selection': '清除选择'
+             },
+             'ms': {
+                 // Navigation
+                 'Dashboard': 'Papan Pemuka',
+                 'Pre-Registration': 'Pra-Pendaftaran',
+                 'Verify Visitor': 'Sahkan Pelawat',
+                 'User Management': 'Pengurusan Pengguna',
+                 'Settings': 'Tetapan',
+                 'Reports': 'Laporan',
+                 // Dashboard Content
+                 'Register New Visitor': 'Daftar Pelawat Baru',
+                 'Visitors Today': 'Pelawat Hari Ini',
+                 'Contractors Today': 'Kontraktor Hari Ini',
+                 'Deliveries Today': 'Penghantaran Hari Ini',
+                 'Overtime Visitors': 'Pelawat Lebih Masa',
+                 'Active': 'Aktif',
+                 'Today': 'Hari Ini',
+                 'No Visitors Yet': 'Tiada Pelawat Lagi',
+                 'Register your first visitor using the form on the left.': 'Daftarkan pelawat pertama anda menggunakan borang di sebelah kiri.',
+                 // Form Fields
+                 'Full Name': 'Nama Penuh',
+                 'Contact Number': 'Nombor Telefon',
+                 'Company': 'Syarikat',
+                 'Category': 'Kategori',
+                 'Purpose of Visit': 'Tujuan Lawatan',
+                 'Vehicle Number': 'Nombor Kenderaan',
+                 'Tower': 'Menara',
+                 'Level': 'Tingkat',
+                 'Unit': 'Unit',
+                 'Register Visitor': 'Daftar Pelawat',
+                 // Status
+                  'Checked Out': 'Telah Keluar',
+                  'Check Out': 'Daftar Keluar',
+                  'Check-out': 'Masa Keluar',
+                  'Print Pass': 'Cetak Pas',
+                  // Bulk Actions
+                  'visitors selected': 'pelawat dipilih',
+                  'Check Out Selected': 'Daftar Keluar Terpilih',
+                  'Clear Selection': 'Kosongkan Pilihan'
+             }
+         };
+        
+        function changeLanguage(lang) {
+            const currentLang = document.getElementById('current-language');
+            const langMap = { 'en': 'EN', 'zh': '中文', 'ms': 'MS' };
+            currentLang.textContent = langMap[lang];
+            
+            // Store language preference
+            localStorage.setItem('language', lang);
+            
+            // Translate visible text elements
+            translatePage(lang);
+        }
+        
+        function translatePage(lang) {
+            const elements = document.querySelectorAll('[data-translate]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+        }
+        
+        // Load saved language
+        const savedLang = localStorage.getItem('language') || 'en';
+        changeLanguage(savedLang);
+        
+        // Notification functionality
+        function closeNotification(button) {
+            const notification = button.closest('.notification');
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                notification.remove();
+                // Hide container if no notifications left
+                const container = document.getElementById('notifications-container');
+                if (container && container.children.length === 0) {
+                    container.style.display = 'none';
+                }
+            }, 300);
+        }
+        
+        // Auto-dismiss notifications
+        document.addEventListener('DOMContentLoaded', function() {
+            const notifications = document.querySelectorAll('.notification[data-auto-dismiss="true"]');
+            notifications.forEach(notification => {
+                setTimeout(() => {
+                    const closeButton = notification.querySelector('.notification-close');
+                    if (closeButton) {
+                        closeNotification(closeButton);
+                    }
+                }, 5000); // Auto-dismiss after 5 seconds
+            });
+        });
+ 
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

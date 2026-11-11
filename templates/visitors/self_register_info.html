@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}Visitor Self Registration - Info{% endblock %}
+
+{% block content %}
+<div class="login-container p-4">
+  <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+    <div class="text-center mb-6">
+      <img src="/media/logos/sctlogo-white.png" alt="SmartCity" class="h-10 mx-auto mb-3" />
+      <h1 class="text-2xl font-bold">Visitor Information</h1>
+      <p class="text-gray-600 dark:text-gray-400">Please fill in your details</p>
+    </div>
+
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium mb-1">Full Name *</label>
+          <input type="text" name="full_name" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Contact Number *</label>
+          <input type="text" name="contact_number" required class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Company</label>
+          <input type="text" name="company" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Category</label>
+          <select name="category" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select</option>
+            {% for cat in visitor_categories %}
+              <option value="{{ cat.id }}">{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">IC Last 4 Digits</label>
+          <input type="text" name="ic_last_digits" maxlength="4" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <label for="tower" class="block text-sm font-medium mb-1">{{ address_config.tower_label|default:"Tower" }}</label>
+          <select id="tower" name="tower" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select Tower</option>
+            {% if address_config and address_config.tower_options %}
+              {% for t in address_config.tower_options %}
+                <option value="{{ t }}">{{ t }}</option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </div>
+        <div>
+          <label for="level" class="block text-sm font-medium mb-1">{{ address_config.level_label|default:"Level" }}</label>
+          <select id="level" name="level" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select Level</option>
+            {% if address_config and address_config.level_options %}
+              {% for lv in address_config.level_options %}
+                <option value="{{ lv }}">{{ lv }}</option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </div>
+        <div>
+          <label for="unit" class="block text-sm font-medium mb-1">{{ address_config.unit_label|default:"Unit" }}</label>
+          <select id="unit" name="unit" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select Unit</option>
+            {% if address_config and address_config.unit_options %}
+              {% for u in address_config.unit_options %}
+                <option value="{{ u }}">{{ u }}</option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Purpose</label>
+        <textarea name="purpose" rows="3" class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="submit" class="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Continue to Photo</button>
+        <button type="reset" class="px-5 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Reset</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

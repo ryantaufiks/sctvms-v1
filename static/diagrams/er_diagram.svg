@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444" />
+    </marker>
+    <style>
+      .box { fill:#fff; stroke:#333; stroke-width:1.5; rx:8; ry:8; }
+      .title { font: 600 14px Arial, sans-serif; fill:#111; }
+      .label { font: 12px Arial, sans-serif; fill:#333; }
+      .rel { font: 12px Arial, sans-serif; fill:#555; }
+      .cluster { fill:#f9fafb; stroke:#e5e7eb; rx:12; ry:12; }
+    </style>
+  </defs>
+
+  <!-- Clusters -->
+  <rect x="40" y="40" width="420" height="340" class="cluster" />
+  <text x="50" y="60" class="label">Site Settings</text>
+
+  <rect x="480" y="40" width="320" height="340" class="cluster" />
+  <text x="490" y="60" class="label">Visitors</text>
+
+  <rect x="820" y="40" width="340" height="340" class="cluster" />
+  <text x="830" y="60" class="label">Accounts</text>
+
+  <!-- Site Settings Entities -->
+  <rect x="60" y="90" width="180" height="60" class="box" />
+  <text x="70" y="115" class="title">Site</text>
+  <text x="70" y="135" class="label">id, name, is_active</text>
+
+  <rect x="60" y="180" width="180" height="60" class="box" />
+  <text x="70" y="205" class="title">SiteLogo</text>
+  <text x="70" y="225" class="label">1-1 Site</text>
+
+  <rect x="60" y="270" width="180" height="60" class="box" />
+  <text x="70" y="295" class="title">SiteConfiguration</text>
+  <text x="70" y="315" class="label">1-1 Site</text>
+
+  <rect x="260" y="180" width="180" height="60" class="box" />
+  <text x="270" y="205" class="title">AddressConfiguration</text>
+  <text x="270" y="225" class="label">1-1 Site</text>
+
+  <rect x="260" y="90" width="180" height="60" class="box" />
+  <text x="270" y="115" class="title">FormFieldConfiguration</text>
+  <text x="270" y="135" class="label">N-1 Site</text>
+
+  <rect x="260" y="270" width="180" height="60" class="box" />
+  <text x="270" y="295" class="title">VisitorCategory</text>
+  <text x="270" y="315" class="label">N-1 Site</text>
+
+  <!-- Visitors Entities -->
+  <rect x="500" y="100" width="200" height="70" class="box" />
+  <text x="510" y="125" class="title">Visitor</text>
+  <text x="510" y="145" class="label">id, pass_number, ...</text>
+
+  <rect x="500" y="220" width="200" height="70" class="box" />
+  <text x="510" y="245" class="title">PreRegistration</text>
+  <text x="510" y="265" class="label">unique_link, otp, ...</text>
+
+  <!-- Accounts Entities -->
+  <rect x="840" y="100" width="200" height="70" class="box" />
+  <text x="850" y="125" class="title">User (auth_user)</text>
+  <text x="850" y="145" class="label">id, username, ...</text>
+
+  <rect x="840" y="220" width="200" height="70" class="box" />
+  <text x="850" y="245" class="title">UserProfile</text>
+  <text x="850" y="265" class="label">1-1 User, role</text>
+
+  <!-- Relationships -->
+  <!-- Site -> SiteLogo -->
+  <line x1="150" y1="150" x2="150" y2="180" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="155" y="170" class="rel">1—1</text>
+
+  <!-- Site -> SiteConfiguration -->
+  <line x1="150" y1="210" x2="150" y2="270" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="155" y="245" class="rel">1—1</text>
+
+  <!-- Site -> AddressConfiguration -->
+  <line x1="240" y1="210" x2="260" y2="210" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="235" y="205" class="rel">1—1</text>
+
+  <!-- Site -> FormFieldConfiguration (1-N) -->
+  <line x1="150" y1="120" x2="260" y2="120" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="205" y="110" class="rel">1—N</text>
+
+  <!-- Site -> VisitorCategory (1-N) -->
+  <line x1="150" y1="300" x2="260" y2="300" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="205" y="290" class="rel">1—N</text>
+
+  <!-- VisitorCategory -> Visitor (1-N) -->
+  <line x1="350" y1="300" x2="500" y2="135" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="420" y="230" class="rel">1—N</text>
+
+  <!-- Visitor -> PreRegistration (1-1) -->
+  <line x1="600" y1="170" x2="600" y2="220" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="605" y="200" class="rel">1—1</text>
+
+  <!-- User -> UserProfile (1-1) -->
+  <line x1="940" y1="170" x2="940" y2="220" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="945" y="200" class="rel">1—1</text>
+
+  <!-- User -> PreRegistration (registered_by) 1-N -->
+  <line x1="840" y1="130" x2="700" y2="255" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="750" y="205" class="rel">1—N (registered_by)</text>
+
+  <!-- User -> PreRegistration (verified_by) 1-N -->
+  <line x1="1040" y1="130" x2="700" y2="265" stroke="#999" stroke-dasharray="4,3" stroke-width="1.5" marker-end="url(#arrow)" />
+  <text x="820" y="235" class="rel">1—N (verified_by)</text>
+</svg>

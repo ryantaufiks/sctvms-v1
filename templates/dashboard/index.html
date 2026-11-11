@@ -1,0 +1,1982 @@
+{% extends 'base.html' %}
+{% load i18n tz %}
+
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-4">
+    {% if no_sites %}
+        <div class="glassmorphism rounded-2xl p-8 text-center">
+            <div class="text-red-600 dark:text-red-400">
+                <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <h2 class="text-2xl font-bold mb-2">{% trans "No Site Assigned" %}</h2>
+                <p class="text-lg">{% trans "You must be assigned to a site to view the dashboard." %}</p>
+                <p class="mt-4 text-sm">{% trans "Please contact your administrator to assign you to a site." %}</p>
+            </div>
+        </div>
+    {% else %}
+        <!-- Site Header -->
+        <div class="flex items-center justify-between py-2">
+            <div class="flex items-center space-x-2">
+                <h1 class="text-xl font-semibold"><span data-translate="Dashboard">Dashboard</span></h1>
+                <span class="text-xs px-2 py-1 rounded bg-white/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">{{ site.name }}</span>
+            </div>
+            <div class="flex items-center space-x-3">
+                {% if site_config and site_config.enable_door_control %}
+                <!-- Door Control Button -->
+                <button id="door-control-btn" onclick="openDoor()" class="flex items-center space-x-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="hidden sm:inline" data-translate="Open Door">Open Door</span>
+                </button>
+                {% endif %}
+                {% if site_config and site_config.enable_gate_control %}
+                <!-- Gate Control Button -->
+                <button id="gate-control-btn" onclick="openGate()" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="hidden sm:inline" data-translate="Open Gate">Open Gate</span>
+                </button>
+                {% endif %}
+                <span class="text-sm text-gray-500 dark:text-gray-400 hidden md:inline">{% trans "Today" %}</span>
+            </div>
+        </div>
+        <div class="h-px bg-gray-200 dark:bg-gray-800 mb-2"></div>
+        
+        <!-- Analytics Cards -->
+        <div class="relative">
+            <!-- Desktop/Tablet Grid Layout -->
+            <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Total Visitors -->
+                 <div class="glassmorphism rounded-xl p-4">
+                     <div class="flex items-center justify-between">
+                         <div class="flex items-center">
+                             <div class="p-2 rounded-full bg-blue-500 bg-opacity-20">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                  </svg>
+                             </div>
+                             <div class="ml-4">
+                                 <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Visitors Today" %}</p>
+                                 <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ visitors_today }}</p>
+                                 <div class="flex items-center mt-1">
+                                     {% if visitors_change > 0 %}
+                                         <span class="text-green-600 text-sm font-medium">↗ +{{ visitors_change }}%</span>
+                                     {% elif visitors_change < 0 %}
+                                         <span class="text-red-600 text-sm font-medium">↘ {{ visitors_change }}%</span>
+                                     {% else %}
+                                         <span class="text-gray-500 text-sm font-medium">→ 0%</span>
+                                     {% endif %}
+                                     <span class="text-xs text-gray-500 ml-2">vs yesterday</span>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                     <!-- Mini Chart -->
+                      <div class="mt-4">
+                          <div class="flex items-end space-x-1 h-8">
+                              <div class="bg-blue-200 dark:bg-blue-800 rounded-sm" style="height: {% if visitors_yesterday > 0 %}{{ visitors_yesterday|add:2 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                              <div class="bg-blue-500 rounded-sm" style="height: {% if visitors_today > 0 %}{{ visitors_today|add:2 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                          </div>
+                          <div class="flex justify-between text-xs text-gray-500 mt-1">
+                              <span>Yesterday: {{ visitors_yesterday }}</span>
+                              <span>Today: {{ visitors_today }}</span>
+                          </div>
+                      </div>
+                 </div>
+                
+                <!-- Total Contractors -->
+                 <div class="glassmorphism rounded-xl p-4">
+                     <div class="flex items-center justify-between">
+                         <div class="flex items-center">
+                             <div class="p-3 rounded-full bg-green-500 bg-opacity-20">
+                                 <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                 </svg>
+                             </div>
+                             <div class="ml-4">
+                                 <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Contractors Today" %}</p>
+                                 <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ contractors_today }}</p>
+                                 <div class="flex items-center mt-1">
+                                     {% if contractors_change > 0 %}
+                                         <span class="text-green-600 text-sm font-medium">↗ +{{ contractors_change }}%</span>
+                                     {% elif contractors_change < 0 %}
+                                         <span class="text-red-600 text-sm font-medium">↘ {{ contractors_change }}%</span>
+                                     {% else %}
+                                         <span class="text-gray-500 text-sm font-medium">→ 0%</span>
+                                     {% endif %}
+                                     <span class="text-xs text-gray-500 ml-2">vs yesterday</span>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                     <!-- Mini Chart -->
+                     <div class="mt-4">
+                         <div class="flex items-end space-x-1 h-8">
+                             <div class="bg-green-200 dark:bg-green-800 rounded-sm" style="height: {% if contractors_yesterday > 0 %}{{ contractors_yesterday|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                             <div class="bg-green-500 rounded-sm" style="height: {% if contractors_today > 0 %}{{ contractors_today|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                         </div>
+                         <div class="flex justify-between text-xs text-gray-500 mt-1">
+                             <span>Yesterday: {{ contractors_yesterday }}</span>
+                             <span>Today: {{ contractors_today }}</span>
+                         </div>
+                     </div>
+                 </div>
+                
+                <!-- Total Deliveries -->
+                 <div class="glassmorphism rounded-xl p-4">
+                      <div class="flex items-center justify-between">
+                         <div class="flex items-center">
+                             <div class="p-3 rounded-full bg-yellow-500 bg-opacity-20">
+                                 <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                 </svg>
+                             </div>
+                             <div class="ml-4">
+                                 <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Deliveries Today" %}</p>
+                                 <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ deliveries_today }}</p>
+                                 <div class="flex items-center mt-1">
+                                     {% if deliveries_change > 0 %}
+                                         <span class="text-green-600 text-sm font-medium">↗ +{{ deliveries_change }}%</span>
+                                     {% elif deliveries_change < 0 %}
+                                         <span class="text-red-600 text-sm font-medium">↘ {{ deliveries_change }}%</span>
+                                     {% else %}
+                                         <span class="text-gray-500 text-sm font-medium">→ 0%</span>
+                                     {% endif %}
+                                     <span class="text-xs text-gray-500 ml-2">vs yesterday</span>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                     <!-- Mini Chart -->
+                     <div class="mt-4">
+                         <div class="flex items-end space-x-1 h-8">
+                             <div class="bg-yellow-200 dark:bg-yellow-800 rounded-sm" style="height: {% if deliveries_yesterday > 0 %}{{ deliveries_yesterday|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                             <div class="bg-yellow-500 rounded-sm" style="height: {% if deliveries_today > 0 %}{{ deliveries_today|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                         </div>
+                         <div class="flex justify-between text-xs text-gray-500 mt-1">
+                             <span>Yesterday: {{ deliveries_yesterday }}</span>
+                             <span>Today: {{ deliveries_today }}</span>
+                         </div>
+                     </div>
+                 </div>
+                
+                <!-- Overtime Visitors -->
+                 <div class="glassmorphism rounded-xl p-4">
+                      <div class="flex items-center justify-between">
+                         <div class="flex items-center">
+                             <div class="p-3 rounded-full bg-red-500 bg-opacity-20">
+                                 <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                 </svg>
+                             </div>
+                             <div class="ml-4">
+                                 <p class="text-sm font-medium text-gray-600 dark:text-gray-400" data-translate="Overtime Visitors">Overtime Visitors</p>
+                                 <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ overtime_visitors }}</p>
+                                 <div class="flex items-center mt-1">
+                                     {% if overtime_visitors > 0 %}
+                                         <span class="text-red-600 text-sm font-medium">⚠ Active</span>
+                                     {% else %}
+                                         <span class="text-green-600 text-sm font-medium">✓ All Clear</span>
+                                     {% endif %}
+                                     <span class="text-xs text-gray-500 ml-2">after midnight</span>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                     <!-- Mini Chart -->
+                     <div class="mt-4">
+                         <div class="flex items-end space-x-1 h-8">
+                             <div class="bg-red-200 dark:bg-red-800 rounded-sm" style="height: {% if overtime_visitors_yesterday > 0 %}{{ overtime_visitors_yesterday|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                             <div class="bg-red-500 rounded-sm" style="height: {% if overtime_visitors > 0 %}{{ overtime_visitors|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                         </div>
+                         <div class="flex justify-between text-xs text-gray-500 mt-1">
+                             <span>Yesterday: {{ overtime_visitors_yesterday|default:0 }}</span>
+                             <span>Today: {{ overtime_visitors }}</span>
+                         </div>
+                     </div>
+                 </div>
+            </div>
+            
+            <!-- Mobile Swipeable Carousel -->
+            <div class="md:hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">{% trans "Analytics" %}</h3>
+                    <div class="flex space-x-1" id="carousel-indicators">
+                        <div class="w-2 h-2 rounded-full bg-blue-500 indicator active" data-slide="0"></div>
+                        <div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 indicator" data-slide="1"></div>
+                        <div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 indicator" data-slide="2"></div>
+                        <div class="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 indicator" data-slide="3"></div>
+                    </div>
+                </div>
+                
+                <div class="overflow-hidden rounded-xl">
+                    <div class="flex transition-transform duration-300 ease-in-out" id="mobile-carousel" style="transform: translateX(0%)">
+                        <!-- Total Visitors - Mobile -->
+                        <div class="w-full flex-shrink-0 px-2">
+                            <div class="glassmorphism rounded-xl p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="p-2 rounded-full bg-blue-500 bg-opacity-20 mr-3">
+                                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400" data-translate="Visitors Today">Visitors Today</p>
+                            <div class="flex items-center">
+                                {% if visitors_change > 0 %}
+                                    <span class="text-green-600 text-xs font-medium">↗ +{{ visitors_change }}%</span>
+                                {% elif visitors_change < 0 %}
+                                    <span class="text-red-600 text-xs font-medium">↘ {{ visitors_change }}%</span>
+                                {% else %}
+                                    <span class="text-gray-500 text-xs font-medium">→ 0%</span>
+                                {% endif %}
+                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-3xl font-bold text-blue-600">{{ visitors_today }}</p>
+                                        <p class="text-xs text-gray-500">{{ visitors_yesterday }} yesterday</p>
+                                    </div>
+                                </div>
+                                <!-- Mini Chart -->
+                                <div class="mt-3">
+                                    <div class="flex items-end space-x-1 h-6">
+                                        <div class="bg-blue-200 dark:bg-blue-800 rounded-sm" style="height: {% if visitors_yesterday > 0 %}{% widthratio visitors_yesterday 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                                        <div class="bg-blue-500 rounded-sm" style="height: {% if visitors_today > 0 %}{% widthratio visitors_today 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Yesterday: {{ visitors_yesterday|default:0 }}</span>
+                                        <span>Today: {{ visitors_today }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Total Contractors - Mobile -->
+                        <div class="w-full flex-shrink-0 px-2">
+                            <div class="glassmorphism rounded-xl p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="p-2 rounded-full bg-green-500 bg-opacity-20 mr-3">
+                                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400" data-translate="Contractors Today">Contractors Today</p>
+                            <div class="flex items-center">
+                                {% if contractors_change > 0 %}
+                                    <span class="text-green-600 text-xs font-medium">↗ +{{ contractors_change }}%</span>
+                                {% elif contractors_change < 0 %}
+                                    <span class="text-red-600 text-xs font-medium">↘ {{ contractors_change }}%</span>
+                                {% else %}
+                                    <span class="text-gray-500 text-xs font-medium">→ 0%</span>
+                                {% endif %}
+                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-3xl font-bold text-green-600">{{ contractors_today }}</p>
+                                        <p class="text-xs text-gray-500">{{ contractors_yesterday }} yesterday</p>
+                                    </div>
+                                </div>
+                                <!-- Mini Chart -->
+                                <div class="mt-3">
+                                    <div class="flex items-end space-x-1 h-6">
+                                        <div class="bg-green-200 dark:bg-green-800 rounded-sm" style="height: {% if contractors_yesterday > 0 %}{% widthratio contractors_yesterday 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                                        <div class="bg-green-500 rounded-sm" style="height: {% if contractors_today > 0 %}{% widthratio contractors_today 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Yesterday: {{ contractors_yesterday|default:0 }}</span>
+                                        <span>Today: {{ contractors_today }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Total Deliveries - Mobile -->
+                        <div class="w-full flex-shrink-0 px-2">
+                            <div class="glassmorphism rounded-xl p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="p-2 rounded-full bg-yellow-500 bg-opacity-20 mr-3">
+                                            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400" data-translate="Deliveries Today">Deliveries Today</p>
+                            <div class="flex items-center">
+                                {% if deliveries_change > 0 %}
+                                    <span class="text-green-600 text-xs font-medium">↗ +{{ deliveries_change }}%</span>
+                                {% elif deliveries_change < 0 %}
+                                    <span class="text-red-600 text-xs font-medium">↘ {{ deliveries_change }}%</span>
+                                {% else %}
+                                    <span class="text-gray-500 text-xs font-medium">→ 0%</span>
+                                {% endif %}
+                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-3xl font-bold text-yellow-600">{{ deliveries_today }}</p>
+                                        <p class="text-xs text-gray-500">{{ deliveries_yesterday }} yesterday</p>
+                                    </div>
+                                </div>
+                                <!-- Mini Chart -->
+                                <div class="mt-3">
+                                    <div class="flex items-end space-x-1 h-6">
+                                        <div class="bg-yellow-200 dark:bg-yellow-800 rounded-sm" style="height: {% if deliveries_yesterday > 0 %}{% widthratio deliveries_yesterday 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                                        <div class="bg-yellow-500 rounded-sm" style="height: {% if deliveries_today > 0 %}{% widthratio deliveries_today 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Yesterday: {{ deliveries_yesterday|default:0 }}</span>
+                                        <span>Today: {{ deliveries_today }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Overtime Visitors - Mobile -->
+                        <div class="w-full flex-shrink-0 px-2">
+                            <div class="glassmorphism rounded-xl p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <div class="p-2 rounded-full bg-red-500 bg-opacity-20 mr-3">
+                                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Overtime Visitors" %}</p>
+                                            <div class="flex items-center">
+                                                {% if overtime_visitors > 0 %}
+                                                    <span class="text-red-600 text-xs font-medium">⚠ Active</span>
+                                                {% else %}
+                                                    <span class="text-green-600 text-xs font-medium">✓ All Clear</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ overtime_visitors }}</p>
+                                    </div>
+                                </div>
+                                <!-- Mini Chart -->
+                                <div class="mt-3">
+                                    <div class="flex items-end space-x-1 h-6">
+                                        <div class="bg-red-200 dark:bg-red-800 rounded-sm" style="height: {% if overtime_visitors_yesterday > 0 %}{{ overtime_visitors_yesterday|add:1 }}0%{% else %}10px{% endif %}; width: 6px;"></div>
+                                        <div class="bg-red-500 rounded-sm" style="height: {% if overtime_visitors > 0 %}{{ overtime_visitors|add:1 }}0%{% else %}10px{% endif %}; width: 6px;"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Yesterday: {{ overtime_visitors_yesterday|default:0 }}</span>
+                                        <span>Today: {{ overtime_visitors }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Two Column Layout: Registration Form (Left) and Visitor List (Right) -->
+         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+             <!-- Visitor Registration Form (Left Column - Collapsible) -->
+             <div class="lg:col-span-1">
+                 <div class="glassmorphism rounded-xl" id="registration-panel">
+                     <div class="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-900/20 cursor-pointer" onclick="toggleRegistrationForm()">
+                         <h2 class="text-lg font-semibold text-blue-800 dark:text-blue-200" data-translate="Register New Visitor">Register New Visitor</h2>
+                         <button type="button" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors" id="toggle-btn">
+                             <svg class="w-5 h-5 transform transition-transform" id="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                             </svg>
+                         </button>
+                     </div>
+                     
+                     <div class="p-6" id="registration-form">
+                         <form method="post" class="space-y-4">
+                             {% csrf_token %}
+                             <div class="space-y-4">
+                                  {% for field in form_fields %}
+                                      {% if field.field_name == 'category' %}
+                                          <div>
+                                              <label for="{{ field.field_name }}" class="block text-sm font-medium mb-1">
+                                                  {{ field.field_label }}{% if field.is_required %} *{% endif %}
+                                              </label>
+                                              <select id="{{ field.field_name }}" name="{{ field.field_name }}" 
+                                                      {% if field.is_required %}required{% endif %}
+                                                      class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                  <option value="">{{ field.placeholder_text|default:"Select Category" }}</option>
+                                                  {% for category in categories %}
+                                                      <option value="{{ category.id }}">{{ category.name }}</option>
+                                                  {% endfor %}
+                                              </select>
+                                              {% if field.help_text %}
+                                                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ field.help_text }}</p>
+                                              {% endif %}
+                                          </div>
+                                      {% elif field.field_name == 'area_of_visit' %}
+                                          <!-- Searchable Area of Visit Dropdown -->
+                                          <div class="relative" id="area-of-visit-wrapper">
+                                              <label for="area_of_visit" class="block text-sm font-medium mb-1">
+                                                  {{ field.field_label }}{% if field.is_required %} *{% endif %}
+                                              </label>
+                                              <div class="relative">
+                                                  <input type="text" id="area_of_visit_search" 
+                                                         placeholder="{{ field.placeholder_text|default:'Search area...' }}"
+                                                         autocomplete="off"
+                                                         class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                  <input type="hidden" id="area_of_visit" name="area_of_visit" value="">
+                                                  <div id="area_of_visit_dropdown" class="hidden absolute z-[9999] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                      {% for option in field.options %}
+                                                      <div class="area-option px-3 py-2 cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 text-sm" data-value="{{ option }}">
+                                                          {{ option }}
+                                                      </div>
+                                                      {% endfor %}
+                                                  </div>
+                                              </div>
+                                              {% if field.help_text %}
+                                                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ field.help_text }}</p>
+                                              {% endif %}
+                                          </div>
+                                          <!-- Conditional Area of Visit Remarks Field -->
+                                          <div id="area_of_visit_remarks_wrapper" class="hidden transition-all duration-200 mt-3">
+                                              <label for="area_of_visit_remarks" class="block text-sm font-medium mb-1">
+                                                  {% trans "Specific Area / Remarks" %} *
+                                              </label>
+                                              <input type="text" id="area_of_visit_remarks" name="area_of_visit_remarks"
+                                                     placeholder="{% trans 'Enter specific location or remarks...' %}"
+                                                     class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "Please specify details for 'Others' area of visit." %}</p>
+                                          </div>
+                                      {% elif field.field_name == 'tower' and address_config.enable_tower and address_config.address_mode != 'area_of_visit' %}
+                                         <!-- Address Fields in 3-Column Layout -->
+                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                             <!-- Tower -->
+                                             <div>
+                                                 <label for="tower" class="block text-sm font-medium mb-1">
+                                                     {{ address_config.tower_label }}{% if field.is_required %} *{% endif %}
+                                                 </label>
+                                                 <select id="tower" name="tower" 
+                                                         {% if field.is_required %}required{% endif %}
+                                                         class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                     <option value="">{{ field.placeholder_text|default:"Select Tower" }}</option>
+                                                     {% for tower in address_config.tower_options %}
+                                                         <option value="{{ tower }}">{{ tower }}</option>
+                                                     {% endfor %}
+                                                 </select>
+                                             </div>
+                                             
+                                             <!-- Level -->
+                                             {% if address_config.enable_level %}
+                                             <div>
+                                                 <label for="level" class="block text-sm font-medium mb-1">
+                                                     {{ address_config.level_label }}{% for level_field in form_fields %}{% if level_field.field_name == 'level' and level_field.is_required %} *{% endif %}{% endfor %}
+                                                 </label>
+                                                 <select id="level" name="level" 
+                                                         {% for level_field in form_fields %}{% if level_field.field_name == 'level' and level_field.is_required %}required{% endif %}{% endfor %}
+                                                         class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                     <option value="">Select Level</option>
+                                                     {% for level in address_config.level_options %}
+                                                         <option value="{{ level }}">{{ level }}</option>
+                                                     {% endfor %}
+                                                 </select>
+                                             </div>
+                                             {% endif %}
+                                             
+                                             <!-- Unit -->
+                                             {% if address_config.enable_unit %}
+                                             <div>
+                                                 <label for="unit" class="block text-sm font-medium mb-1">
+                                                     {{ address_config.unit_label }}{% for unit_field in form_fields %}{% if unit_field.field_name == 'unit' and unit_field.is_required %} *{% endif %}{% endfor %}
+                                                 </label>
+                                                 <select id="unit" name="unit" 
+                                                         {% for unit_field in form_fields %}{% if unit_field.field_name == 'unit' and unit_field.is_required %}required{% endif %}{% endfor %}
+                                                         class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                     <option value="">Select Unit</option>
+                                                     {% for unit in address_config.unit_options %}
+                                                         <option value="{{ unit }}">{{ unit }}</option>
+                                                     {% endfor %}
+                                                 </select>
+                                             </div>
+                                             {% endif %}
+                                         </div>
+                                     {% elif field.field_name == 'level' and address_config.enable_level %}
+                                         <!-- Skip level field as it's handled in tower section -->
+                                     {% elif field.field_name == 'unit' and address_config.enable_unit %}
+                                         <!-- Skip unit field as it's handled in tower section -->
+                                     {% elif field.field_type == 'textarea' %}
+                                         <div>
+                                             <label for="{{ field.field_name }}" class="block text-sm font-medium mb-1">
+                                                 {{ field.field_label }}{% if field.is_required %} *{% endif %}
+                                             </label>
+                                             <textarea id="{{ field.field_name }}" name="{{ field.field_name }}" 
+                                                       {% if field.is_required %}required{% endif %}
+                                                       placeholder="{{ field.placeholder_text }}"
+                                                       rows="3"
+                                                       class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                                             {% if field.help_text %}
+                                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ field.help_text }}</p>
+                                             {% endif %}
+                                         </div>
+                                     {% elif field.field_type == 'select' and field.options %}
+                                         <div>
+                                             <label for="{{ field.field_name }}" class="block text-sm font-medium mb-1">
+                                                 {{ field.field_label }}{% if field.is_required %} *{% endif %}
+                                             </label>
+                                             <select id="{{ field.field_name }}" name="{{ field.field_name }}" 
+                                                     {% if field.is_required %}required{% endif %}
+                                                     class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                 <option value="">{{ field.placeholder_text|default:"Select Option" }}</option>
+                                                 {% for option in field.options %}
+                                                     <option value="{{ option }}">{{ option }}</option>
+                                                 {% endfor %}
+                                             </select>
+                                             {% if field.help_text %}
+                                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ field.help_text }}</p>
+                                             {% endif %}
+                                         </div>
+                                     {% elif field.field_name == 'vehicle_number' %}
+                                         <div>
+                                             <label for="{{ field.field_name }}" class="block text-sm font-medium mb-1">
+                                                 {{ field.field_label }}{% if field.is_required %} *{% endif %}
+                                             </label>
+                                             <div class="flex space-x-2">
+                                                 <input type="text" 
+                                                        id="{{ field.field_name }}" name="{{ field.field_name }}" 
+                                                        {% if field.is_required %}required{% endif %}
+                                                        {% if field.placeholder_text %}placeholder="{{ field.placeholder_text }}"{% endif %}
+                                                        {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
+                                                        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                                 {% if site_config.enable_alpr_whitelist and not user.profile.is_security_officer %}
+                                                 <button type="button" 
+                                                         onclick="scanPlate()"
+                                                         class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap">
+                                                     <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                     </svg>
+                                                     Scan Plate
+                                                 </button>
+                                                 {% endif %}
+                                             </div>
+                                             <!-- Plate Image Preview -->
+                                             <div id="plate-image-preview" class="hidden mt-2">
+                                                 <img id="plate-image" src="" alt="License Plate" class="max-w-xs h-auto rounded-lg border border-gray-300 dark:border-gray-600">
+                                                 <input type="hidden" id="plate-image-data" name="plate_image_data">
+                                             </div>
+                                             {% if field.help_text %}
+                                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ field.help_text }}</p>
+                                             {% endif %}
+                                         </div>
+                                     {% elif field.field_name != 'check_in_time' %}
+                                         <div>
+                                             <label for="{{ field.field_name }}" class="block text-sm font-medium mb-1">
+                                                 {{ field.field_label }}{% if field.is_required %} *{% endif %}
+                                             </label>
+                                             <input type="{% if field.field_type == 'number' %}number{% elif field.field_type == 'datetime' %}datetime-local{% else %}text{% endif %}" 
+                                                    id="{{ field.field_name }}" name="{{ field.field_name }}" 
+                                                    {% if field.is_required %}required{% endif %}
+                                                    {% if field.placeholder_text %}placeholder="{{ field.placeholder_text }}"{% endif %}
+                                                    {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}
+                                                    {% if field.field_name == 'ic_last_digits' %}pattern="[A-Za-z0-9]{1,4}" title="Enter 1-4 alphanumeric characters"{% endif %}
+                                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                             {% if field.help_text %}
+                                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ field.help_text }}</p>
+                                             {% endif %}
+                                         </div>
+                                     {% endif %}
+                                 {% endfor %}
+                             </div>
+                             <div class="pt-4">
+                                 <button type="submit" 
+                                         class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                     <span data-translate="Register Visitor">Register Visitor</span>
+                                 </button>
+                             </div>
+                         </form>
+                     </div>
+                 </div>
+             </div>
+             
+             <!-- Visitor List (Right Column) -->
+             <div class="lg:col-span-2">
+                                      <!-- Tab Switcher & Action Header -->
+                      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
+                          <!-- Tab Buttons -->
+                          <div class="flex space-x-2 border-b sm:border-b-0 border-gray-200 dark:border-gray-700 w-full sm:w-auto">
+                              <button id="tab-btn-visitors" type="button" onclick="switchDashboardTab('visitors')" 
+                                      class="px-4 py-2.5 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 flex items-center space-x-2 focus:outline-none transition-colors">
+                                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                  </svg>
+                                  <span>{% trans "Visitor List" %}</span>
+                              </button>
+                              <button id="tab-btn-occurrence" type="button" onclick="switchDashboardTab('occurrence')" 
+                                      class="px-4 py-2.5 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center space-x-2 focus:outline-none transition-colors">
+                                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                  </svg>
+                                  <span>{% trans "Occurrence Book (DOB)" %}</span>
+                              </button>
+                          </div>
+                          
+                          <!-- Header Controls & Badges -->
+                          <div class="flex flex-wrap items-center gap-2">
+                              <div id="visitor-badges" class="flex space-x-2">
+                                  <span class="text-xs px-2.5 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full font-medium">
+                                      {{ active_visitors_count }} {% trans "Active" %}
+                                  </span>
+                                  <span class="text-xs px-2.5 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full font-medium">
+                                      {{ upcoming_visitors_count }} {% trans "Upcoming" %}
+                                  </span>
+                                  <span class="text-xs px-2.5 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full font-medium">
+                                      {{ today_total }} {% trans "Today" %}
+                                  </span>
+                              </div>
+                              
+                              <button type="button" onclick="openOccurrenceModal()" class="inline-flex items-center px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer">
+                                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                  </svg>
+                                  {% trans "+ Log Occurrence" %}
+                              </button>
+                          </div>
+                      </div>
+
+                      <!-- Tab 1: Visitor List Container -->
+                      <div id="tab-content-visitors">
+                      {% if all_visitors or recent_checkins %}
+                         <div class="overflow-x-auto">
+                             <!-- Bulk Actions Bar -->
+                             <div id="bulk-actions" class="hidden bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4">
+                                 <div class="flex items-center justify-between">
+                                     <span class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                         <span id="selected-count">0</span> <span data-translate="visitors selected">visitors selected</span>
+                                     </span>
+                                     <div class="flex space-x-2">
+                                         <button onclick="bulkCheckout()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+                                             <span data-translate="Check Out Selected">Check Out Selected</span>
+                                         </button>
+                                         {% if user.profile.role == 'admin' %}
+                                         <button onclick="bulkDelete()" class="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-900 transition-colors text-sm font-medium">
+                                             <span data-translate="Delete Selected">Delete Selected</span>
+                                         </button>
+                                         {% endif %}
+                                         <button onclick="clearSelection()" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-sm font-medium">
+                                             <span data-translate="Clear Selection">Clear Selection</span>
+                                         </button>
+                                     </div>
+                                 </div>
+                             </div>
+                             
+                             <table class="w-full">
+                                 <thead class="bg-gray-50 dark:bg-gray-800">
+                                     <tr>
+                                         <th class="px-4 py-3 text-left">
+                                             <input type="checkbox" id="select-all" class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                                         </th>
+                                          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                              {% trans "Visitor" %}
+                                          </th>
+                                         {% for field in form_fields %}
+                                             {% if field.field_name == 'ic_last_digits' %}
+                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                             {% trans "IC No." %}
+                                         </th>
+                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                             {% trans "Pass Number" %}
+                                         </th>
+                                             {% elif field.field_name == 'company' %}
+                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                 {% trans "Company" %}
+                                             </th>
+                                             {% elif field.field_name == 'category' %}
+                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                 {% trans "Category" %}
+                                             </th>
+                                             {% endif %}
+                                         {% endfor %}
+                                         {% if site_config.enable_alpr_whitelist %}
+                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                             {% trans "Plate Image" %}
+                                         </th>
+                                         {% endif %}
+                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                             {% trans "Check-in" %}
+                                         </th>
+                                          {% if address_config.address_mode == 'area_of_visit' %}
+                                          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                              {% trans "Area of Visit" %}
+                                          </th>
+                                          {% else %}
+                                          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                              {% trans "Tower, Level Unit" %}
+                                          </th>
+                                          {% endif %}
+                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                             {% trans "Status" %}
+                                         </th>
+                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                             {% trans "Actions" %}
+                                         </th>
+                                     </tr>
+                                 </thead>
+                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                     {% for visitor in all_visitors %}
+                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800" id="visitor-row-{{ visitor.id }}">
+                                             <td class="px-4 py-3 whitespace-nowrap">
+                                                 {% if not visitor.check_out_time %}
+                                                     <input type="checkbox" name="visitor_ids" value="{{ visitor.id }}" class="visitor-checkbox rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                                                 {% endif %}
+                                             </td>
+                                             <td class="px-4 py-3 whitespace-nowrap">
+                                                 <div class="flex items-center">
+                                                     <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold mr-3 text-sm">
+                                                         {{ visitor.full_name|first|upper }}
+                                                     </div>
+                                                     <div>
+                                                         <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                             {{ visitor.full_name }}
+                                                         </div>
+                                                         <div class="text-sm text-gray-500 dark:text-gray-400">
+                                                             {% if visitor.contact_number %}
+                                                                 ****{{ visitor.contact_number|slice:"4:" }}
+                                                             {% else %}
+                                                                 -
+                                                             {% endif %}
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                              </td>
+                                              {% for field in form_fields %}
+                                                 {% if field.field_name == 'ic_last_digits' %}
+                                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                 {{ visitor.ic_last_digits|default:"-" }}
+                                             </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                {% if visitor.pass_number %}
+                                                    {{ visitor.pass_number }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                                 {% elif field.field_name == 'company' %}
+                                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                 {{ visitor.company|default:"-" }}
+                                             </td>
+                                                 {% elif field.field_name == 'category' %}
+                                             <td class="px-4 py-3 whitespace-nowrap">
+                                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                     {{ visitor.category.name }}
+                                                 </span>
+                                             </td>
+                                                 {% endif %}
+                                             {% endfor %}
+                                             {% if site_config.enable_alpr_whitelist %}
+                                             <td class="px-4 py-3 whitespace-nowrap">
+                                                 {% if visitor.plate_image %}
+                                                     <img src="{{ visitor.plate_image.url }}" alt="Plate Image" class="w-16 h-10 object-cover rounded border cursor-pointer" onclick="showPlateImage('{{ visitor.plate_image.url }}', '{{ visitor.full_name|escapejs }}')">
+                                                 {% else %}
+                                                     <span class="text-gray-400 text-xs">No Image</span>
+                                                 {% endif %}
+                                             </td>
+                                             {% endif %}
+                                             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                 {% if visitor.check_in_time %}
+                                                     {{ visitor.check_in_time|localtime|date:"M d, H:i" }}
+                                                 {% else %}
+                                                     {% if visitor.pre_registration.expected_arrival_date %}
+                                                         Expected: {{ visitor.pre_registration.expected_arrival_date|date:"M d" }}
+                                                     {% else %}
+                                                         -
+                                                     {% endif %}
+                                                 {% endif %}
+                                             </td>
+                                              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                  {% if address_config.address_mode == 'area_of_visit' %}
+                                                      {% if visitor.area_of_visit|lower == 'others' and visitor.area_of_visit_remarks %}Others ({{ visitor.area_of_visit_remarks }}){% else %}{{ visitor.area_of_visit|default:"-" }}{% endif %}
+                                                  {% else %}
+                                                      {% if visitor.tower or visitor.level or visitor.unit %}
+                                                          {{ visitor.tower|default:"" }}{% if visitor.tower %}{% if visitor.level or visitor.unit %}, {% endif %}{% endif %}{% if visitor.level %}L{{ visitor.level }}{% endif %}{% if visitor.unit %} {{ visitor.unit }}{% endif %}
+                                                      {% else %}-{% endif %}
+                                                  {% endif %}
+                                              </td>
+                                             <td class="px-4 py-3 whitespace-nowrap">
+                                                 {% if visitor.status == 'Upcoming' %}
+                                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                         {% trans "Upcoming" %}
+                                                     </span>
+                                                 {% elif visitor.check_out_time %}
+                                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                                                         {% trans "Checked Out" %}
+                                                     </span>
+                                                 {% else %}
+                                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                         {% trans "Active" %}
+                                                     </span>
+                                                 {% endif %}
+                                             </td>
+                                             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                                                 <div class="flex space-x-2">
+                                                     {% if visitor.status == 'Upcoming' and user.profile.role == 'security_officer' %}
+                                                         <a href="{% url 'visitors:verify_pre_registration' visitor.pre_registration.id %}" class="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="{% trans 'Verify & Check In' %}">
+                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                             </svg>
+                                                         </a>
+                                                     {% elif visitor.status == 'Active' %}
+                                                         <a href="{% url 'visitors:checkout' visitor.id %}" class="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="{% trans 'Check Out' %}">
+                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                                             </svg>
+                                                         </a>
+                                                     {% endif %}
+                                                     {% if visitor.pass_number %}
+                                                         <a href="{% url 'visitors:print_pass' visitor.id %}" class="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="{% trans 'Print Pass' %}">
+                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                                             </svg>
+                                                         </a>
+                                                     {% endif %}
+                                                     {% if user.profile.role == 'admin' %}
+                                                         <button onclick="deleteVisitor({{ visitor.id }}, '{{ visitor.full_name|escapejs }}')" class="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="{% trans 'Delete Visitor' %}">
+                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                             </svg>
+                                                         </button>
+                                                     {% endif %}
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                     {% endfor %}
+                                     {% for visitor in recent_checkins %}
+                                         {% if visitor.check_out_time %}
+                                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 opacity-75">
+                                                 <td class="px-4 py-3 whitespace-nowrap">
+                                                     <!-- Empty cell for checked-out visitors -->
+                                                 </td>
+                                                 <td class="px-4 py-3 whitespace-nowrap">
+                                                     <div class="flex items-center">
+                                                         <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white font-semibold mr-3 text-sm">
+                                                             {{ visitor.full_name|first|upper }}
+                                                         </div>
+                                                         <div>
+                                                             <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                                 {{ visitor.full_name }}
+                                                             </div>
+                                                             <div class="text-sm text-gray-500 dark:text-gray-400">
+                                                                 {% if visitor.contact_number %}
+                                                                     ****{{ visitor.contact_number|slice:"4:" }}
+                                                                 {% else %}
+                                                                     -
+                                                                 {% endif %}
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                  </td>
+                                                   {% for field in form_fields %}
+                                                       {% if field.field_name == 'ic_last_digits' %}
+                                                   <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                       {{ visitor.ic_last_digits|default:"-" }}
+                                                   </td>
+                                                   <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                       {% if visitor.pass_number %}
+                                                           {{ visitor.pass_number }}
+                                                       {% else %}
+                                                           -
+                                                       {% endif %}
+                                                   </td>
+                                                      {% elif field.field_name == 'company' %}
+                                                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                      {{ visitor.company|default:"-" }}
+                                                  </td>
+                                                      {% elif field.field_name == 'category' %}
+                                                  <td class="px-4 py-3 whitespace-nowrap">
+                                                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                                                          {{ visitor.category.name }}
+                                                      </span>
+                                                  </td>
+                                                      {% endif %}
+                                                  {% endfor %}
+                                                 {% if site_config.enable_alpr_whitelist %}
+                                                 <td class="px-4 py-3 whitespace-nowrap">
+                                                     {% if visitor.plate_image %}
+                                                         <img src="{{ visitor.plate_image.url }}" alt="Plate Image" class="w-16 h-10 object-cover rounded border cursor-pointer" onclick="showPlateImage('{{ visitor.plate_image.url }}', '{{ visitor.full_name|escapejs }}')">
+                                                     {% else %}
+                                                         <span class="text-gray-400 text-xs">No Image</span>
+                                                     {% endif %}
+                                                 </td>
+                                                 {% endif %}
+                                                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                     {{ visitor.check_in_time|localtime|date:"M d, H:i" }}
+                                                 </td>
+                                                  <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                                      {% if address_config.address_mode == 'area_of_visit' %}
+                                                          {% if visitor.area_of_visit|lower == 'others' and visitor.area_of_visit_remarks %}
+                                                              Others ({{ visitor.area_of_visit_remarks }})
+                                                          {% else %}
+                                                              {{ visitor.area_of_visit|default:"-" }}
+                                                          {% endif %}
+                                                      {% else %}
+                                                          {% if visitor.tower or visitor.level or visitor.unit %}
+                                                          {{ visitor.tower|default:"" }}{% if visitor.tower %}{% if visitor.level or visitor.unit %}, {% endif %}{% endif %}{% if visitor.level %}L{{ visitor.level }}{% endif %}{% if visitor.unit %} {{ visitor.unit }}{% endif %}
+                                                          {% else %}-{% endif %}
+                                                      {% endif %}
+                                                  </td>
+                                                 <td class="px-4 py-3 whitespace-nowrap">
+                                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                                                         {% trans "Checked Out" %}
+                                                     </span>
+                                                 </td>
+                                                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                                                     <a href="{% url 'visitors:print_pass' visitor.id %}" class="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="{% trans 'Print Pass' %}">
+                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                                         </svg>
+                                                     </a>
+                                                 </td>
+                                             </tr>
+                                         {% endif %}
+                                     {% endfor %}
+                                 </tbody>
+                             </table>
+                         </div>
+                         
+                         <!-- Pagination Controls -->
+                         {% if page_obj.paginator.count > 0 %}
+                         <div class="mt-4 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                             <!-- Items per page selector -->
+                             <div class="flex items-center space-x-2">
+                                 <span class="text-sm text-gray-600 dark:text-gray-400">Show:</span>
+                                 <select onchange="changePerPage(this.value)" class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm">
+                                     <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                                     <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+                                     <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                                 </select>
+                                 <span class="text-sm text-gray-600 dark:text-gray-400">per page</span>
+                             </div>
+                             
+                             <!-- Pagination info and controls -->
+                             <div class="flex items-center space-x-4">
+                                 <span class="text-sm text-gray-600 dark:text-gray-400">
+                                     Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} visitors
+                                 </span>
+                                 
+                                 {% if page_obj.has_other_pages %}
+                                 <div class="flex items-center space-x-1">
+                                     {% if page_obj.has_previous %}
+                                         <a href="?page=1&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">First</a>
+                                         <a href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Previous</a>
+                                     {% endif %}
+                                     
+                                     <span class="px-3 py-1 text-sm bg-blue-600 text-white rounded">{{ page_obj.number }}</span>
+                                     
+                                     {% if page_obj.has_next %}
+                                         <a href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Next</a>
+                                         <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ per_page }}" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Last</a>
+                                     {% endif %}
+                                 </div>
+                                 {% endif %}
+                             </div>
+                         </div>
+                         {% endif %}
+                     {% else %}
+                         <div class="text-center py-12">
+                             <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                             </svg>
+                             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2" data-translate="No Visitors Yet">No Visitors Yet</h3>
+                 <p class="text-gray-600 dark:text-gray-400" data-translate="Register your first visitor using the form on the left.">Register your first visitor using the form on the left.</p>
+                         </div>
+                      {% endif %}
+                      </div> <!-- End #tab-content-visitors -->
+
+                      <!-- Tab 2: Occurrence Book (DOB Log) Container -->
+                      <div id="tab-content-occurrence" class="hidden">
+                          {% if occurrence_logs %}
+                              <div class="overflow-x-auto">
+                                  <table class="w-full text-left">
+                                      <thead class="bg-gray-50 dark:bg-gray-800">
+                                          <tr>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Time / Date" %}</th>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Category" %}</th>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Severity" %}</th>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Location" %}</th>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Title & Details" %}</th>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Duty Officer" %}</th>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Account" %}</th>
+                                              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{% trans "Photo" %}</th>
+                                          </tr>
+                                      </thead>
+                                      <tbody class="divide-y divide-gray-200 dark:divide-gray-700" id="occurrence-table-body">
+                                          {% for item in occurrence_logs %}
+                                              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
+                                                  <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap font-mono">
+                                                      {{ item.created_at|date:"Y-m-d H:i" }}
+                                                  </td>
+                                                  <td class="px-4 py-3 text-xs whitespace-nowrap">
+                                                      <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200">
+                                                          {{ item.get_category_display }}
+                                                      </span>
+                                                  </td>
+                                                  <td class="px-4 py-3 text-xs whitespace-nowrap">
+                                                      {% if item.severity == 'critical' %}
+                                                          <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/80 dark:text-red-200">Critical</span>
+                                                      {% elif item.severity == 'warning' %}
+                                                          <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/80 dark:text-yellow-200">Warning</span>
+                                                      {% else %}
+                                                          <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200">Normal</span>
+                                                      {% endif %}
+                                                  </td>
+                                                  <td class="px-4 py-3 text-xs text-gray-900 dark:text-gray-100 whitespace-nowrap font-medium">
+                                                      {{ item.location|default:"-" }}
+                                                  </td>
+                                                  <td class="px-4 py-3 text-xs text-gray-900 dark:text-gray-100">
+                                                      <div class="font-semibold text-gray-900 dark:text-white">{{ item.title }}</div>
+                                                      <div class="text-gray-500 dark:text-gray-400 text-xs mt-0.5 whitespace-pre-wrap">{{ item.description }}</div>
+                                                  </td>
+                                                  <td class="px-4 py-3 text-xs whitespace-nowrap font-semibold text-indigo-600 dark:text-indigo-400">
+                                                      👤 {{ item.officer_name }}
+                                                  </td>
+                                                  <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                                      {{ item.created_by.username|default:"System" }}
+                                                  </td>
+                                                  <td class="px-4 py-3 text-xs whitespace-nowrap">
+                                                      {% if item.attachment %}
+                                                          <a href="{{ item.attachment.url }}" target="_blank" class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                                                              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                                              {% trans "View Photo" %}
+                                                          </a>
+                                                      {% else %}
+                                                          <span class="text-gray-400">-</span>
+                                                      {% endif %}
+                                                  </td>
+                                              </tr>
+                                          {% endfor %}
+                                      </tbody>
+                                  </table>
+                              </div>
+                          {% else %}
+                              <div class="text-center py-12 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                                  <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                  </svg>
+                                  <h3 class="text-base font-medium text-gray-900 dark:text-white">{% trans "No Occurrence Logs Recorded Yet" %}</h3>
+                                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4">{% trans "Start recording daily patrol notes, facility incidents, or shift handovers." %}</p>
+                                  <button type="button" onclick="openOccurrenceModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer">
+                                      {% trans "+ Log First Occurrence" %}
+                                  </button>
+                              </div>
+                          {% endif %}
+                      </div> <!-- End #tab-content-occurrence -->
+                  </div>
+              </div>
+          </div>
+         
+         <script>
+         function toggleRegistrationForm() {
+             const form = document.getElementById('registration-form');
+             const icon = document.getElementById('toggle-icon');
+             
+             if (form.style.display === 'none') {
+                 form.style.display = 'block';
+                 icon.style.transform = 'rotate(45deg)'; // Plus becomes X/minus when expanded
+             } else {
+                 form.style.display = 'none';
+                 icon.style.transform = 'rotate(0deg)'; // Back to plus when collapsed
+             }
+         }
+         
+         // Searchable Area of Visit dropdown
+         (function() {
+             const searchInput = document.getElementById('area_of_visit_search');
+             const hiddenInput = document.getElementById('area_of_visit');
+             const dropdown = document.getElementById('area_of_visit_dropdown');
+             const remarksWrapper = document.getElementById('area_of_visit_remarks_wrapper');
+             const remarksInput = document.getElementById('area_of_visit_remarks');
+             
+             if (!searchInput || !dropdown) return;
+             
+             const options = dropdown.querySelectorAll('.area-option');
+             
+             function updateRemarksVisibility(selectedVal) {
+                 if (!remarksWrapper || !remarksInput) return;
+                 if (selectedVal && selectedVal.trim().toLowerCase() === 'others') {
+                     remarksWrapper.classList.remove('hidden');
+                 } else {
+                     remarksWrapper.classList.add('hidden');
+                     remarksInput.value = '';
+                 }
+             }
+             
+             searchInput.addEventListener('focus', function() {
+                 dropdown.classList.remove('hidden');
+                 filterOptions('');
+             });
+             
+             searchInput.addEventListener('input', function() {
+                 filterOptions(this.value.toLowerCase());
+                 hiddenInput.value = this.value;
+                 updateRemarksVisibility(this.value);
+             });
+             
+             function filterOptions(query) {
+                 options.forEach(function(opt) {
+                     const text = opt.textContent.toLowerCase();
+                     if (query === '' || text.includes(query)) {
+                         opt.style.display = '';
+                     } else {
+                         opt.style.display = 'none';
+                     }
+                 });
+             }
+             
+             options.forEach(function(opt) {
+                 opt.addEventListener('click', function() {
+                     const val = this.dataset.value;
+                     searchInput.value = val;
+                     hiddenInput.value = val;
+                     dropdown.classList.add('hidden');
+                     updateRemarksVisibility(val);
+                 });
+             });
+             
+             document.addEventListener('click', function(e) {
+                 if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                     dropdown.classList.add('hidden');
+                 }
+             });
+         })();
+         
+         // Mobile carousel functionality
+         let currentSlide = 0;
+         const totalSlides = 4;
+         
+         function updateCarousel() {
+             const carousel = document.getElementById('mobile-carousel');
+             const indicators = document.querySelectorAll('.indicator');
+             
+             if (carousel) {
+                 carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
+                 
+                 indicators.forEach((indicator, index) => {
+                     if (index === currentSlide) {
+                         indicator.classList.add('bg-blue-500');
+                         indicator.classList.remove('bg-gray-300', 'dark:bg-gray-600');
+                     } else {
+                         indicator.classList.remove('bg-blue-500');
+                         indicator.classList.add('bg-gray-300', 'dark:bg-gray-600');
+                     }
+                 });
+             }
+         }
+         
+         function nextSlide() {
+             currentSlide = (currentSlide + 1) % totalSlides;
+             updateCarousel();
+         }
+         
+         function prevSlide() {
+             currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+             updateCarousel();
+         }
+         
+         // Auto-advance carousel every 5 seconds
+         setInterval(nextSlide, 5000);
+         
+         // Touch/swipe support
+         let startX = 0;
+         let endX = 0;
+         
+         document.addEventListener('DOMContentLoaded', function() {
+             const carousel = document.getElementById('mobile-carousel');
+             
+             if (carousel) {
+                 carousel.addEventListener('touchstart', function(e) {
+                     startX = e.touches[0].clientX;
+                 });
+                 
+                 carousel.addEventListener('touchend', function(e) {
+                     endX = e.changedTouches[0].clientX;
+                     handleSwipe();
+                 });
+                 
+                 function handleSwipe() {
+                     const swipeThreshold = 50;
+                     const diff = startX - endX;
+                     
+                     if (Math.abs(diff) > swipeThreshold) {
+                         if (diff > 0) {
+                             nextSlide();
+                         } else {
+                             prevSlide();
+                         }
+                     }
+                 }
+                 
+                 // Click indicators to navigate
+                 const indicators = document.querySelectorAll('.indicator');
+                 indicators.forEach((indicator, index) => {
+                     indicator.addEventListener('click', function() {
+                         currentSlide = index;
+                         updateCarousel();
+                     });
+                 });
+             }
+         });
+         
+         // Bulk checkout functionality
+         const selectAllCheckbox = document.getElementById('select-all');
+         const visitorCheckboxes = document.querySelectorAll('.visitor-checkbox');
+         const bulkActionsBar = document.getElementById('bulk-actions');
+         const selectedCountSpan = document.getElementById('selected-count');
+         
+         // Select All functionality
+         if (selectAllCheckbox) {
+             selectAllCheckbox.addEventListener('change', function() {
+                 visitorCheckboxes.forEach(checkbox => {
+                     checkbox.checked = this.checked;
+                 });
+                 updateBulkActions();
+             });
+         }
+         
+         // Individual checkbox handling
+         visitorCheckboxes.forEach(checkbox => {
+             checkbox.addEventListener('change', function() {
+                 updateBulkActions();
+                 
+                 // Update select-all checkbox state
+                 const checkedBoxes = document.querySelectorAll('.visitor-checkbox:checked');
+                 if (selectAllCheckbox) {
+                     selectAllCheckbox.checked = checkedBoxes.length === visitorCheckboxes.length;
+                     selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < visitorCheckboxes.length;
+                 }
+             });
+         });
+         
+         function updateBulkActions() {
+             const selectedCheckboxes = document.querySelectorAll('.visitor-checkbox:checked');
+             
+             if (selectedCheckboxes.length > 0) {
+                 bulkActionsBar.classList.remove('hidden');
+                 selectedCountSpan.textContent = selectedCheckboxes.length;
+             } else {
+                 bulkActionsBar.classList.add('hidden');
+             }
+         }
+         
+         window.bulkCheckout = function() {
+             const selectedCheckboxes = document.querySelectorAll('.visitor-checkbox:checked');
+             const visitorIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+             
+             if (visitorIds.length === 0) {
+                 alert('Please select visitors to check out.');
+                 return;
+             }
+             
+             if (confirm(`Are you sure you want to check out ${visitorIds.length} visitor(s)?`)) {
+                 // Create a form and submit it
+                 const form = document.createElement('form');
+                 form.method = 'POST';
+                 form.action = '/visitors/bulk-checkout/';
+                 
+                 // Add CSRF token
+                 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                 const csrfInput = document.createElement('input');
+                 csrfInput.type = 'hidden';
+                 csrfInput.name = 'csrfmiddlewaretoken';
+                 
+                 if (csrfToken) {
+                     csrfInput.value = csrfToken.value;
+                 } else {
+                     // Get CSRF token from cookie
+                     csrfInput.value = getCookie('csrftoken');
+                 }
+                 form.appendChild(csrfInput);
+                 
+                 // Add visitor IDs
+                 visitorIds.forEach(id => {
+                     const input = document.createElement('input');
+                     input.type = 'hidden';
+                     input.name = 'visitor_ids';
+                     input.value = id;
+                     form.appendChild(input);
+                 });
+                 
+                 document.body.appendChild(form);
+                 form.submit();
+             }
+         };
+         
+         window.clearSelection = function() {
+             const checkboxes = document.querySelectorAll('.visitor-checkbox, #select-all');
+             checkboxes.forEach(cb => cb.checked = false);
+             document.getElementById('bulk-actions').classList.add('hidden');
+         };
+         
+         // Helper function to get CSRF token from cookie
+         function getCookie(name) {
+             let cookieValue = null;
+             if (document.cookie && document.cookie !== '') {
+                 const cookies = document.cookie.split(';');
+                 for (let i = 0; i < cookies.length; i++) {
+                     const cookie = cookies[i].trim();
+                     if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                         break;
+                     }
+                 }
+             }
+             return cookieValue;
+         }
+         
+         // Delete visitor function
+         window.deleteVisitor = function(visitorId, visitorName) {
+             if (confirm(`Are you sure you want to delete visitor record for ${visitorName}? This action cannot be undone.`)) {
+                 // Create a form and submit it
+                 const form = document.createElement('form');
+                 form.method = 'POST';
+                 form.action = `/visitors/delete/${visitorId}/`;
+                 
+                 // Add CSRF token
+                 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                 const csrfInput = document.createElement('input');
+                 csrfInput.type = 'hidden';
+                 csrfInput.name = 'csrfmiddlewaretoken';
+                 
+                 if (csrfToken) {
+                     csrfInput.value = csrfToken.value;
+                 } else {
+                     csrfInput.value = getCookie('csrftoken');
+                 }
+                 form.appendChild(csrfInput);
+                 
+                 document.body.appendChild(form);
+                 form.submit();
+             }
+         };
+         
+         // Bulk delete function
+         window.bulkDelete = function() {
+             const selectedCheckboxes = document.querySelectorAll('.visitor-checkbox:checked');
+             const visitorIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+             
+             if (visitorIds.length === 0) {
+                 alert('Please select visitors to delete.');
+                 return;
+             }
+             
+             if (confirm(`Are you sure you want to delete ${visitorIds.length} visitor record(s)? This action cannot be undone.`)) {
+                 // Create a form and submit it
+                 const form = document.createElement('form');
+                 form.method = 'POST';
+                 form.action = '/visitors/bulk-delete/';
+                 
+                 // Add CSRF token
+                 const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+                 const csrfInput = document.createElement('input');
+                 csrfInput.type = 'hidden';
+                 csrfInput.name = 'csrfmiddlewaretoken';
+                 
+                 if (csrfToken) {
+                     csrfInput.value = csrfToken.value;
+                 } else {
+                     csrfInput.value = getCookie('csrftoken');
+                 }
+                 form.appendChild(csrfInput);
+                 
+                 // Add visitor IDs
+                 visitorIds.forEach(id => {
+                     const input = document.createElement('input');
+                     input.type = 'hidden';
+                     input.name = 'visitor_ids';
+                     input.value = id;
+                     form.appendChild(input);
+                 });
+                 
+                 document.body.appendChild(form);
+                 form.submit();
+             }
+         };
+         
+         // Pagination function
+         function changePerPage(perPage) {
+             const url = new URL(window.location);
+             url.searchParams.set('per_page', perPage);
+             url.searchParams.set('page', '1'); // Reset to first page
+             window.location.href = url.toString();
+         }
+
+        // Live Auto-Fill: lookup by IC last digits or Contact Number (debounced)
+        (function() {
+            const icInput = document.getElementById('ic_last_digits');
+            const phoneInput = document.getElementById('contact_number');
+            if (!icInput && !phoneInput) return;
+
+            let timer = null;
+            const DEBOUNCE_MS = 350;
+
+            function fillForm(data) {
+                if (!data) return;
+                const map = {
+                    full_name: 'full_name',
+                    contact_number: 'contact_number',
+                    company: 'company',
+                    vehicle_number: 'vehicle_number',
+                    tower: 'tower',
+                    level: 'level',
+                    unit: 'unit'
+                };
+                Object.entries(map).forEach(([key, id]) => {
+                    const el = document.getElementById(id);
+                    if (el && data[key] != null && data[key] !== '') {
+                        el.value = data[key];
+                    }
+                });
+
+                // Category select
+                if (data.category_id != null) {
+                    const catSel = document.getElementById('category');
+                    if (catSel) {
+                        const option = Array.from(catSel.options).find(o => String(o.value) === String(data.category_id));
+                        if (option) catSel.value = option.value;
+                    }
+                }
+                // Intentionally do not overwrite purpose or pass number
+            }
+
+            function currentQuery() {
+                const ic = icInput ? icInput.value.trim() : '';
+                const phone = phoneInput ? phoneInput.value.trim() : '';
+                return { ic, phone };
+            }
+
+            let lastKey = '';
+            function scheduleLookup() {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(async () => {
+                    const { ic, phone } = currentQuery();
+                    if ((ic && ic.length >= 2) || (phone && phone.length >= 4)) {
+                        const key = ic + '|' + phone;
+                        if (key === lastKey) return;
+                        lastKey = key;
+                        try {
+                            const params = new URLSearchParams();
+                            if (ic) params.append('ic', ic);
+                            if (phone) params.append('phone', phone);
+                            const resp = await fetch(`/visitors/lookup/?${params.toString()}`, { headers: { 'Accept': 'application/json' } });
+                            if (!resp.ok) return;
+                            const json = await resp.json();
+                            if (json && json.success && json.found) {
+                                fillForm(json.data);
+                            }
+                        } catch (_) {
+                            // fail silently
+                        }
+                    }
+                }, DEBOUNCE_MS);
+            }
+
+            if (icInput) icInput.addEventListener('input', scheduleLookup);
+            if (phoneInput) phoneInput.addEventListener('input', scheduleLookup);
+        })();
+
+        // Door Control Function
+        async function openDoor() {
+            const button = document.getElementById('door-control-btn');
+            const originalText = button.innerHTML;
+            
+            // Disable button and show loading state
+            button.disabled = true;
+            button.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span class="hidden sm:inline">Opening...</span>
+            `;
+            
+            try {
+                const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+                const csrf = (csrfInput && csrfInput.value) || getCookie('csrftoken') || '';
+                const response = await fetch('/api/door-control/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf
+                    },
+                    body: JSON.stringify({ action: 'open' })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data && data.success) {
+                    // Show success state
+                    button.innerHTML = `
+                        <svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Opened!</span>
+                    `;
+                    
+                    // Reset button after 2 seconds
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.message || 'Failed to open door');
+                }
+            } catch (error) {
+                console.error('Door control error:', error);
+                
+                // Show error state
+                button.innerHTML = `
+                    <svg class="w-5 h-5 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <span class="hidden sm:inline">Error</span>
+                `;
+                
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 3000);
+                
+                // Show user-friendly error message
+                alert('Failed to open door. Ensure the Face Reader Terminal is connected to the network.');
+            }
+        }
+        
+        // Gate Control Function
+        async function openGate() {
+            const button = document.getElementById('gate-control-btn');
+            const originalText = button.innerHTML;
+            
+            // Disable button and show loading state
+            button.disabled = true;
+            button.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span class="hidden sm:inline">Opening...</span>
+            `;
+            
+            try {
+                const response = await fetch('/api/gate-control/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ action: 'open' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show success state
+                    button.innerHTML = `
+                        <svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Opened!</span>
+                    `;
+                    
+                    // Reset button after 2 seconds
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error(data.message || 'Failed to open gate');
+                }
+            } catch (error) {
+                console.error('Gate control error:', error);
+                
+                // Show error state
+                button.innerHTML = `
+                    <svg class="w-5 h-5 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <span class="hidden sm:inline">Error</span>
+                `;
+                
+                // Reset button after 3 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 3000);
+                
+                // Show user-friendly error message
+                alert('Failed to open gate. Ensure the Dahua ANPR camera is connected to the network.');
+            }
+        }
+        
+        // Scan Plate Function
+        async function scanPlate() {
+            const vehicleInput = document.getElementById('vehicle_number');
+            const plateImagePreview = document.getElementById('plate-image-preview');
+            const plateImage = document.getElementById('plate-image');
+            const plateImageData = document.getElementById('plate-image-data');
+            
+            // Show loading state
+            const originalPlaceholder = vehicleInput.placeholder;
+            vehicleInput.placeholder = 'Scanning plate...';
+            vehicleInput.disabled = true;
+            
+            try {
+                const response = await fetch('/visitors/api/scan-plate/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Auto-fill vehicle number
+                    vehicleInput.value = data.plate_number;
+                    
+                    // Show plate image
+                    if (data.image_base64) {
+                        plateImage.src = 'data:image/jpeg;base64,' + data.image_base64;
+                        plateImageData.value = data.image_base64;
+                        plateImagePreview.classList.remove('hidden');
+                    }
+                    
+                    // Show success message
+                    vehicleInput.placeholder = 'Plate scanned successfully!';
+                    setTimeout(() => {
+                        vehicleInput.placeholder = originalPlaceholder;
+                    }, 3000);
+                } else {
+                    throw new Error(data.error || 'Failed to scan plate');
+                }
+            } catch (error) {
+                console.error('Scan plate error:', error);
+                
+                // Show error message
+                vehicleInput.placeholder = 'Scan failed. Try again.';
+                setTimeout(() => {
+                    vehicleInput.placeholder = originalPlaceholder;
+                }, 3000);
+                
+                // Show user-friendly error message
+                alert('Failed to scan plate: ' + (error.message || 'Ensure the ALPR camera is connected to the network.'));
+            } finally {
+                vehicleInput.disabled = false;
+            }
+        }
+        
+        // Function to show plate image in modal
+        function showPlateImage(imageUrl, visitorName) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('plateImageModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'plateImageModal';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden';
+                modal.innerHTML = `
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Plate Image - <span id="modalVisitorName"></span></h3>
+                            <button onclick="closePlateImageModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="text-center">
+                            <img id="modalPlateImage" src="" alt="Plate Image" class="max-w-full h-auto rounded border">
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            // Update modal content
+            document.getElementById('modalVisitorName').textContent = visitorName;
+            document.getElementById('modalPlateImage').src = imageUrl;
+            
+            // Show modal
+            modal.classList.remove('hidden');
+        }
+        
+        // Function to close plate image modal
+        function closePlateImageModal() {
+            const modal = document.getElementById('plateImageModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('plateImageModal');
+            if (modal && event.target === modal) {
+                closePlateImageModal();
+            }
+        });
+        </script>
+<!-- Datalist for officer name autocomplete -->
+<datalist id="recent-officers-datalist">
+    {% for name in recent_officer_names %}
+        <option value="{{ name }}"></option>
+    {% endfor %}
+</datalist>
+
+<!-- Step 1 Modal: Log Occurrence Form -->
+<div id="occurrence-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4 overflow-y-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 bg-indigo-600 dark:bg-indigo-700 text-white flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                <h3 class="text-lg font-bold">{% trans "Log Daily Occurrence (DOB)" %}</h3>
+            </div>
+            <button type="button" onclick="closeOccurrenceModal()" class="text-white/80 hover:text-white hover:bg-white/10 rounded-lg p-1 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Form Body -->
+        <form id="occurrence-form" onsubmit="event.preventDefault(); proceedToOfficerVerify();" class="p-6 space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="is_ajax" value="1">
+            <input type="hidden" id="final_officer_type" name="officer_type" value="me">
+            <input type="hidden" id="final_other_officer_name" name="other_officer_name" value="">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Category -->
+                <div>
+                    <label for="occ_category" class="block text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 mb-1">{% trans "Category" %} *</label>
+                    <select id="occ_category" name="category" required class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+                        <option value="routine_patrol">Routine Patrol</option>
+                        <option value="incident">Incident Report</option>
+                        <option value="key_management">Key Management</option>
+                        <option value="facility">Facility / Maintenance</option>
+                        <option value="handover">Shift Handover</option>
+                        <option value="general" selected>General Note</option>
+                    </select>
+                </div>
+
+                <!-- Severity -->
+                <div>
+                    <label for="occ_severity" class="block text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 mb-1">{% trans "Severity Level" %} *</label>
+                    <select id="occ_severity" name="severity" required class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+                        <option value="normal" selected>Normal / Info</option>
+                        <option value="warning">Warning / Minor</option>
+                        <option value="critical">Critical / Major</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Location -->
+            <div>
+                <label for="occ_location" class="block text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 mb-1">{% trans "Location / Area" %}</label>
+                <input type="text" id="occ_location" name="location" placeholder="e.g. Guardhouse, Main Gate, Level 2 Corridor" class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <!-- Title -->
+            <div>
+                <label for="occ_title" class="block text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 mb-1">{% trans "Title / Summary" %} *</label>
+                <input type="text" id="occ_title" name="title" required placeholder="Short summary of entry" class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="occ_description" class="block text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 mb-1">{% trans "Detailed Description" %} *</label>
+                <textarea id="occ_description" name="description" rows="3" required placeholder="Full details, chronological sequence of events, or officer notes..." class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <!-- Photo Attachment -->
+            <div>
+                <label for="occ_attachment" class="block text-xs font-semibold uppercase text-gray-600 dark:text-gray-300 mb-1">{% trans "Photo Attachment (Optional)" %}</label>
+                <input type="file" id="occ_attachment" name="attachment" accept="image/*" class="w-full text-xs text-gray-500 dark:text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-900/40 dark:file:text-indigo-300 hover:file:bg-indigo-100 cursor-pointer">
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button type="button" onclick="closeOccurrenceModal()" class="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg transition-colors">
+                    {% trans "Cancel" %}
+                </button>
+                <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow transition-colors flex items-center space-x-1">
+                    <span>{% trans "Next: Officer Attribution" %}</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Step 2 Pop-up Modal: Officer Verification -->
+<div id="officer-verify-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all border border-indigo-500/30">
+        <!-- Pop-up Header -->
+        <div class="px-6 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+                <h3 class="text-base font-bold">{% trans "Confirm Duty Officer" %}</h3>
+            </div>
+            <button type="button" onclick="closeOfficerVerifyModal()" class="text-white/80 hover:text-white rounded-lg p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <p class="text-xs text-gray-600 dark:text-gray-300">
+                {% trans "Who is recording this occurrence entry?" %}
+            </p>
+
+            <div class="space-y-3">
+                <!-- Option 1: Currently Logged In Account -->
+                <label class="flex items-center p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 hover:border-indigo-500 cursor-pointer transition-colors">
+                    <input type="radio" name="verify_officer_choice" value="me" checked onchange="toggleOfficerInput(false)" class="text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <div class="ml-3">
+                        <span class="block text-sm font-semibold text-gray-900 dark:text-white">
+                            {% if request.user.get_full_name %}{{ request.user.get_full_name }}{% else %}{{ request.user.username }}{% endif %}
+                        </span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400">{% trans "Current Logged-in Account" %}</span>
+                    </div>
+                </label>
+
+                <!-- Option 2: Other Officer -->
+                <label class="flex items-start p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 hover:border-indigo-500 cursor-pointer transition-colors">
+                    <input type="radio" name="verify_officer_choice" value="other" onchange="toggleOfficerInput(true)" class="mt-1 text-indigo-600 focus:ring-indigo-500 h-4 w-4">
+                    <div class="ml-3 w-full">
+                        <span class="block text-sm font-semibold text-gray-900 dark:text-white">{% trans "Other Security Officer" %}</span>
+                        <span class="block text-xs text-gray-500 dark:text-gray-400 mb-2">{% trans "Select or type officer name" %}</span>
+                        
+                        <input type="text" id="verify_other_name_input" disabled list="recent-officers-datalist" placeholder="Type or select officer name..." class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-100">
+                    </div>
+                </label>
+            </div>
+
+            <!-- Pop-up Actions -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button type="button" onclick="closeOfficerVerifyModal()" class="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                    {% trans "Back" %}
+                </button>
+                <button type="button" onclick="submitOccurrenceForm()" class="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md transition-all">
+                    {% trans "Confirm & Save Entry" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchDashboardTab(tabName) {
+    const vBtn = document.getElementById('tab-btn-visitors');
+    const oBtn = document.getElementById('tab-btn-occurrence');
+    const vContent = document.getElementById('tab-content-visitors');
+    const oContent = document.getElementById('tab-content-occurrence');
+    const vBadges = document.getElementById('visitor-badges');
+
+    if (tabName === 'visitors') {
+        vBtn.className = "px-4 py-2.5 text-sm font-semibold border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 flex items-center space-x-2 focus:outline-none transition-colors";
+        oBtn.className = "px-4 py-2.5 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center space-x-2 focus:outline-none transition-colors";
+        vContent.classList.remove('hidden');
+        oContent.classList.add('hidden');
+        if (vBadges) vBadges.classList.remove('hidden');
+    } else {
+        oBtn.className = "px-4 py-2.5 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 flex items-center space-x-2 focus:outline-none transition-colors";
+        vBtn.className = "px-4 py-2.5 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex items-center space-x-2 focus:outline-none transition-colors";
+        oContent.classList.remove('hidden');
+        vContent.classList.add('hidden');
+        if (vBadges) vBadges.classList.add('hidden');
+    }
+}
+
+function openOccurrenceModal() {
+    document.getElementById('occurrence-modal').classList.remove('hidden');
+}
+
+function closeOccurrenceModal() {
+    document.getElementById('occurrence-modal').classList.add('hidden');
+}
+
+function proceedToOfficerVerify() {
+    const title = document.getElementById('occ_title').value.trim();
+    const desc = document.getElementById('occ_description').value.trim();
+    if (!title || !desc) {
+        alert('Please fill in both Title and Detailed Description.');
+        return;
+    }
+    document.getElementById('officer-verify-modal').classList.remove('hidden');
+}
+
+function closeOfficerVerifyModal() {
+    document.getElementById('officer-verify-modal').classList.add('hidden');
+}
+
+function toggleOfficerInput(enable) {
+    const input = document.getElementById('verify_other_name_input');
+    input.disabled = !enable;
+    if (enable) {
+        input.focus();
+    }
+}
+
+async function submitOccurrenceForm() {
+    const isOther = document.querySelector('input[name="verify_officer_choice"]:checked').value === 'other';
+    const otherName = document.getElementById('verify_other_name_input').value.trim();
+
+    if (isOther && !otherName) {
+        alert('Please enter or select the officer name.');
+        document.getElementById('verify_other_name_input').focus();
+        return;
+    }
+
+    document.getElementById('final_officer_type').value = isOther ? 'other' : 'me';
+    document.getElementById('final_other_officer_name').value = otherName;
+
+    const form = document.getElementById('occurrence-form');
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch("{% url 'dashboard:add_occurrence' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            closeOfficerVerifyModal();
+            closeOccurrenceModal();
+            form.reset();
+            switchDashboardTab('occurrence');
+            location.reload(); // Refresh to display new item and update datalist
+        } else {
+            alert(data.message || 'Error saving occurrence log.');
+        }
+    } catch (err) {
+        console.error('Error submitting occurrence:', err);
+        alert('An error occurred while saving.');
+    }
+}
+</script>
+    {% endif %}
+</div>
+{% endblock %}

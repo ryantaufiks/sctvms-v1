@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="700" viewBox="0 0 1300 700">
+  <style>
+    .actor { font: 600 14px Arial, sans-serif; fill:#111; }
+    .label { font: 12px Arial, sans-serif; fill:#333; }
+    .lifeline { stroke:#bbb; stroke-dasharray:4 4; }
+    .arrow { stroke:#333; stroke-width:1.5; marker-end:url(#arrow); }
+    .note { fill:#fef3c7; stroke:#f59e0b; rx:6; ry:6; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" />
+    </marker>
+  </defs>
+
+  <!-- Actors -->
+  <text x="100" y="30" class="actor">Staff/Management/Admin</text>
+  <line x1="120" y1="50" x2="120" y2="650" class="lifeline"/>
+
+  <text x="400" y="30" class="actor">Visitors App (View)</text>
+  <line x1="420" y1="50" x2="420" y2="650" class="lifeline"/>
+
+  <text x="700" y="30" class="actor">Models</text>
+  <line x1="720" y1="50" x2="720" y2="650" class="lifeline"/>
+
+  <text x="1000" y="30" class="actor">Media/QR</text>
+  <line x1="1020" y1="50" x2="1020" y2="650" class="lifeline"/>
+
+  <!-- Interactions -->
+  <line x1="120" y1="100" x2="420" y2="100" class="arrow" />
+  <text x="150" y="90" class="label">Open /visitors/pre-register/ and submit form</text>
+
+  <line x1="420" y1="140" x2="720" y2="140" class="arrow" />
+  <text x="450" y="130" class="label">Create Visitor (is_pre_registered=True)</text>
+
+  <line x1="420" y1="180" x2="720" y2="180" class="arrow" />
+  <text x="450" y="170" class="label">Create PreRegistration (unique_link, otp)</text>
+
+  <rect x="760" y="200" width="260" height="70" class="note"/>
+  <text x="770" y="220" class="label">Visitor.save(): generate pass_number</text>
+  <text x="770" y="240" class="label">PR#### for pre-registered</text>
+
+  <line x1="720" y1="280" x2="1020" y2="280" class="arrow" />
+  <text x="740" y="270" class="label">Generate QR from OTP and save image</text>
+
+  <line x1="420" y1="320" x2="120" y2="320" class="arrow" />
+  <text x="200" y="310" class="label">Return success page with link and QR</text>
+
+  <rect x="460" y="360" width="360" height="70" class="note"/>
+  <text x="470" y="382" class="label">Recent Pre-Registrations list</text>
+  <text x="470" y="402" class="label">Staff see own only; Mgmt/Admin see global</text>
+</svg>

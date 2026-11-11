@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Site - VMS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-md mx-auto">
+        <div class="glassmorphism-card">
+            <div class="text-center">
+                <!-- Warning Icon -->
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
+                    <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Delete Site</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                    Are you sure you want to delete <strong>{{ site.name }}</strong>? This action cannot be undone and will remove all associated data.
+                </p>
+                
+                <!-- Site Info -->
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+                    <div class="flex items-center justify-center mb-2">
+                        {% if site.logo %}
+                            <img src="{{ site.logo.url }}" alt="{{ site.name }}" class="h-10 w-10 rounded-full">
+                        {% else %}
+                            <div class="h-10 w-10 bg-red-500 rounded-full flex items-center justify-center">
+                                <span class="text-white font-semibold">{{ site.name|first|upper }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ site.name }}</div>
+                    {% if site.address %}
+                        <div class="text-xs text-gray-600 dark:text-gray-400">{{ site.address }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Action Buttons -->
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div class="flex space-x-4">
+                        <a href="{% url 'site_settings:site_list' %}" class="flex-1 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors text-center">
+                            Cancel
+                        </a>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            Delete Site
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

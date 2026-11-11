@@ -1,0 +1,577 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - VMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Theme Variables */
+    :root {
+        /* Light Theme */
+        --bg-primary: #f8fafc;
+        --bg-secondary: #e2e8f0;
+        --bg-tertiary: #cbd5e1;
+        --text-primary: #1e293b;
+        --text-secondary: #475569;
+        --text-tertiary: #64748b;
+        --accent-primary: #3b82f6;
+        --accent-secondary: #1d4ed8;
+        --border-color: #e2e8f0;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --input-bg: rgba(255, 255, 255, 0.8);
+        --city-color-1: #e2e8f0;
+        --city-color-2: #cbd5e1;
+        --city-color-3: #94a3b8;
+        --city-color-4: #64748b;
+    }
+    
+    .dark {
+        /* Dark Theme */
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --bg-tertiary: #334155;
+        --text-primary: #f1f5f9;
+        --text-secondary: #cbd5e1;
+        --text-tertiary: #94a3b8;
+        --accent-primary: #3b82f6;
+        --accent-secondary: #1d4ed8;
+        --border-color: #334155;
+        --shadow-color: rgba(0, 0, 0, 0.5);
+        --glass-bg: rgba(15, 23, 42, 0.4);
+        --glass-border: rgba(59, 130, 246, 0.2);
+        --input-bg: rgba(15, 23, 42, 0.3);
+        --city-color-1: #1e293b;
+        --city-color-2: #334155;
+        --city-color-3: #475569;
+        --city-color-4: #64748b;
+    }
+    
+    /* Modern Login Page Styles - Moved to combined section above */
+    
+    /* Remove any white/light backgrounds from body and html */
+     html, body {
+         background: var(--bg-primary) !important;
+         margin: 0;
+         padding: 0;
+         height: 100%;
+         width: 100%;
+         overflow-x: hidden;
+         transition: background-color 0.3s ease;
+     }
+     
+     /* Ensure login container fills entire viewport */
+     .login-container {
+         position: fixed;
+         top: 0;
+         left: 0;
+         width: 100vw;
+         height: 100vh;
+         background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 25%, var(--bg-tertiary) 50%, var(--bg-secondary) 75%, var(--bg-primary) 100%);
+         overflow: hidden;
+         transition: all 0.3s ease;
+     }
+    
+    /* Animated Background Elements */
+    .bg-animation {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 1;
+    }
+    
+    .floating-shape {
+         position: absolute;
+         background: rgba(59, 130, 246, 0.1);
+         border-radius: 50%;
+         animation: float 6s ease-in-out infinite;
+         backdrop-filter: blur(10px);
+         transition: background-color 0.3s ease;
+     }
+     
+     .floating-shape:nth-child(2) {
+         width: 80px;
+         height: 80px;
+         top: 20%;
+         left: 10%;
+         animation-delay: 0s;
+         background: rgba(59, 130, 246, 0.15);
+     }
+     
+     .floating-shape:nth-child(3) {
+         width: 120px;
+         height: 120px;
+         top: 60%;
+         right: 15%;
+         animation-delay: 2s;
+         background: rgba(147, 51, 234, 0.1);
+     }
+     
+     .floating-shape:nth-child(4) {
+         width: 60px;
+         height: 60px;
+         bottom: 30%;
+         left: 20%;
+         animation-delay: 4s;
+         background: rgba(16, 185, 129, 0.1);
+     }
+     
+     .floating-shape:nth-child(5) {
+         width: 100px;
+         height: 100px;
+         top: 10%;
+         right: 30%;
+         animation-delay: 1s;
+         background: rgba(59, 130, 246, 0.08);
+     }
+     
+     .floating-shape:nth-child(6) {
+         width: 140px;
+         height: 140px;
+         bottom: 10%;
+         right: 10%;
+         animation-delay: 3s;
+         background: rgba(147, 51, 234, 0.12);
+     }
+    
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+            opacity: 0.7;
+        }
+        50% {
+            transform: translateY(-20px) rotate(180deg);
+            opacity: 1;
+        }
+    }
+    
+    /* Abstract City Buildings Background */
+     .city-skyline {
+         position: absolute;
+         bottom: 0;
+         left: 0;
+         width: 100%;
+         height: 60%;
+         background: linear-gradient(to top, var(--bg-primary) 0%, transparent 100%);
+         z-index: 1;
+         transition: all 0.3s ease;
+     }
+     
+     .city-skyline::before {
+         content: '';
+         position: absolute;
+         bottom: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background: 
+             /* Building silhouettes */
+             linear-gradient(to top, var(--city-color-1) 0%, var(--city-color-1) 40%, transparent 40%),
+             linear-gradient(to top, var(--city-color-2) 0%, var(--city-color-2) 60%, transparent 60%),
+             linear-gradient(to top, var(--city-color-1) 0%, var(--city-color-1) 35%, transparent 35%),
+             linear-gradient(to top, var(--city-color-3) 0%, var(--city-color-3) 70%, transparent 70%),
+             linear-gradient(to top, var(--city-color-1) 0%, var(--city-color-1) 45%, transparent 45%),
+             linear-gradient(to top, var(--city-color-2) 0%, var(--city-color-2) 55%, transparent 55%),
+             linear-gradient(to top, var(--city-color-1) 0%, var(--city-color-1) 30%, transparent 30%),
+             linear-gradient(to top, var(--city-color-3) 0%, var(--city-color-3) 65%, transparent 65%);
+         background-size: 
+             80px 100%, 120px 100%, 90px 100%, 110px 100%,
+             70px 100%, 100px 100%, 60px 100%, 130px 100%;
+         background-position: 
+             0% 100%, 15% 100%, 25% 100%, 40% 100%,
+             55% 100%, 70% 100%, 85% 100%, 95% 100%;
+         background-repeat: no-repeat;
+         opacity: 0.6;
+         transition: all 0.3s ease;
+     }
+     
+     .city-skyline::after {
+         content: '';
+         position: absolute;
+         bottom: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         background: 
+             /* Additional building layers */
+             linear-gradient(to top, var(--bg-primary) 0%, var(--bg-primary) 25%, transparent 25%),
+             linear-gradient(to top, var(--city-color-1) 0%, var(--city-color-1) 50%, transparent 50%),
+             linear-gradient(to top, var(--bg-primary) 0%, var(--bg-primary) 20%, transparent 20%),
+             linear-gradient(to top, var(--city-color-2) 0%, var(--city-color-2) 75%, transparent 75%),
+             linear-gradient(to top, var(--city-color-1) 0%, var(--city-color-1) 40%, transparent 40%);
+         background-size: 
+             50px 100%, 140px 100%, 75px 100%, 95px 100%, 85px 100%;
+         background-position: 
+             5% 100%, 30% 100%, 50% 100%, 75% 100%, 90% 100%;
+         background-repeat: no-repeat;
+         opacity: 0.8;
+         transition: all 0.3s ease;
+     }
+    
+    /* Glassmorphism Login Card */
+     .login-card {
+         background: var(--glass-bg);
+         backdrop-filter: blur(20px);
+         border: 1px solid var(--glass-border);
+         border-radius: 20px;
+         box-shadow: 
+             0 8px 32px var(--shadow-color),
+             inset 0 1px 0 var(--glass-border);
+         position: relative;
+         z-index: 10;
+         padding: 2.5rem;
+         max-width: 420px;
+         width: 100%;
+         margin: 0 auto;
+         transition: all 0.3s ease;
+     }
+    
+    /* Modern Form Inputs */
+     .modern-input {
+         background: var(--input-bg);
+         backdrop-filter: blur(10px);
+         border: 1px solid var(--border-color);
+         border-radius: 12px;
+         padding: 1rem 1.25rem;
+         width: 100%;
+         color: var(--text-primary);
+         font-size: 1rem;
+         transition: all 0.3s ease;
+     }
+     
+     .modern-input:focus {
+         outline: none;
+         border-color: var(--accent-primary);
+         background: var(--input-bg);
+         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+     }
+     
+     .modern-input::placeholder {
+         color: var(--text-tertiary);
+     }
+     
+     .modern-label {
+         color: var(--text-primary);
+         font-weight: 500;
+         margin-bottom: 0.5rem;
+         display: block;
+         font-size: 0.95rem;
+     }
+    
+    /* Modern Button */
+    .modern-btn {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        width: 100%;
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+    
+    .modern-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    }
+    
+    .modern-btn:active {
+        transform: translateY(0);
+    }
+    
+    .quick-guide-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.85rem 1.5rem;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 12px;
+        color: var(--accent-primary);
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(8px);
+    }
+    
+    .quick-guide-btn:hover {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: var(--accent-primary);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+    }
+    
+    /* Logo Styling */
+    .logo-container {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .logo-text {
+         background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #34d399 100%);
+         -webkit-background-clip: text;
+         -webkit-text-fill-color: transparent;
+         background-clip: text;
+         font-size: 2.5rem;
+         font-weight: 800;
+         margin-bottom: 0.5rem;
+         letter-spacing: -0.025em;
+     }
+     
+     .logo-subtitle {
+         color: var(--text-secondary);
+         font-size: 1rem;
+         font-weight: 400;
+     }
+     
+     .version-text {
+         color: var(--text-tertiary);
+         font-size: 0.875rem;
+         font-weight: 300;
+         margin-top: 0.25rem;
+         opacity: 0.8;
+     }
+     
+     /* Theme Toggle Button */
+     .theme-toggle {
+         position: absolute;
+         top: 2rem;
+         right: 2rem;
+         background: var(--glass-bg);
+         backdrop-filter: blur(10px);
+         border: 1px solid var(--glass-border);
+         border-radius: 50%;
+         width: 50px;
+         height: 50px;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         cursor: pointer;
+         transition: all 0.3s ease;
+         z-index: 20;
+     }
+     
+     .theme-toggle:hover {
+         background: var(--accent-primary);
+         border-color: var(--accent-primary);
+         transform: scale(1.1);
+     }
+     
+     .theme-toggle svg {
+         width: 20px;
+         height: 20px;
+         color: var(--text-primary);
+         transition: all 0.3s ease;
+     }
+     
+     .theme-toggle:hover svg {
+         color: white;
+     }
+    
+    /* Error Message */
+    .error-message {
+        background: rgba(239, 68, 68, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        color: #fca5a5;
+        font-size: 0.9rem;
+    }
+    
+    /* Remember Me & Forgot Password */
+     .form-extras {
+         display: flex;
+         justify-content: space-between;
+         align-items: center;
+         margin-bottom: 1.5rem;
+         font-size: 0.9rem;
+     }
+     
+     .remember-me {
+         display: flex;
+         align-items: center;
+         color: var(--text-secondary);
+     }
+     
+     .remember-checkbox {
+         margin-right: 0.5rem;
+         accent-color: var(--accent-primary);
+     }
+     
+     .forgot-link {
+         color: var(--accent-primary);
+         text-decoration: none;
+         transition: color 0.3s ease;
+     }
+     
+     .forgot-link:hover {
+         color: var(--accent-secondary);
+     }
+    
+    /* Responsive Design */
+    @media (max-width: 640px) {
+        .login-card {
+            margin: 1rem;
+            padding: 2rem;
+        }
+        
+        .logo-text {
+            font-size: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+        <svg id="theme-icon-light" class="hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        <svg id="theme-icon-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+        </svg>
+    </button>
+    
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="city-skyline"></div>
+        <div class="floating-shape"></div>
+        <div class="floating-shape"></div>
+        <div class="floating-shape"></div>
+        <div class="floating-shape"></div>
+        <div class="floating-shape"></div>
+    </div>
+    
+    <!-- Login Card -->
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="login-card">
+            <!-- Logo Section -->
+            <div class="logo-container">
+                {% load site_tags %}
+                {% get_site_logo as site_logo %}
+                {% if site_logo %}
+                    <!-- Light Theme Logo -->
+                    {% if site_logo.logo_light %}
+                        <img src="{{ site_logo.logo_light.url }}" alt="{{ site_logo.site.name }}" class="h-20 w-auto mx-auto mb-4 filter drop-shadow-lg block dark:hidden">
+                    {% endif %}
+                    <!-- Dark Theme Logo -->
+                    {% if site_logo.logo_dark %}
+                        <img src="{{ site_logo.logo_dark.url }}" alt="{{ site_logo.site.name }}" class="h-20 w-auto mx-auto mb-4 filter drop-shadow-lg hidden dark:block">
+                    {% endif %}
+                    <!-- Fallback Text Logo -->
+                    {% if not site_logo.logo_light and not site_logo.logo_dark %}
+                        <h1 class="logo-text">{{ site_logo.site.name }}</h1>
+                    {% endif %}
+                {% else %}
+                    <h1 class="logo-text">VMS</h1>
+                {% endif %}
+                <p class="logo-subtitle">Visitor Management System</p>
+                <p class="version-text">Version 2.0 (Beta)</p>
+            </div>
+            
+            <!-- Error Message -->
+            {% if messages %}
+            {% for message in messages %}
+            <div class="error-message">
+                <p>{{ message }}</p>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% if form.errors %}
+            <div class="error-message">
+                <p>Your username and password didn't match. Please try again.</p>
+            </div>
+            {% endif %}
+            
+            <!-- Login Form -->
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                
+                <div class="mb-6">
+                    <label for="id_username" class="modern-label">Username</label>
+                    <input type="text" name="username" id="id_username" class="modern-input" placeholder="Enter your username" required>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="id_password" class="modern-label">Password</label>
+                    <input type="password" name="password" id="id_password" class="modern-input" placeholder="Enter your password" required>
+                </div>
+                
+                <div class="form-extras">
+                    <label class="remember-me">
+                        <input type="checkbox" name="remember" id="remember" class="remember-checkbox">
+                        Remember me
+                    </label>
+                    <a href="#" class="forgot-link">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="modern-btn">Sign in</button>
+                
+                <a href="{% url 'quick_guide' %}" class="quick-guide-btn">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 1.25rem; height: 1.25rem; margin-right: 0.5rem;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                    Officer Quick Guide
+                </a>
+                
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+        </div>
+     </div>
+ </div>
+ 
+ <script>
+     // Theme Toggle Functionality
+     function toggleTheme() {
+         const html = document.documentElement;
+         const lightIcon = document.getElementById('theme-icon-light');
+         const darkIcon = document.getElementById('theme-icon-dark');
+         
+         if (html.classList.contains('dark')) {
+             html.classList.remove('dark');
+             lightIcon.classList.remove('hidden');
+             darkIcon.classList.add('hidden');
+             localStorage.setItem('theme', 'light');
+         } else {
+             html.classList.add('dark');
+             lightIcon.classList.add('hidden');
+             darkIcon.classList.remove('hidden');
+             localStorage.setItem('theme', 'dark');
+         }
+     }
+     
+     // Initialize theme on page load
+     document.addEventListener('DOMContentLoaded', function() {
+         const savedTheme = localStorage.getItem('theme');
+         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+         const html = document.documentElement;
+         const lightIcon = document.getElementById('theme-icon-light');
+         const darkIcon = document.getElementById('theme-icon-dark');
+         
+         if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+             html.classList.add('dark');
+             lightIcon.classList.add('hidden');
+             darkIcon.classList.remove('hidden');
+         } else {
+             html.classList.remove('dark');
+             lightIcon.classList.remove('hidden');
+             darkIcon.classList.add('hidden');
+         }
+     });
+ </script>
+ {% endblock %}

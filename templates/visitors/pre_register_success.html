@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Pre-Registration Complete" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glassmorphism rounded-2xl p-8 text-center">
+        <div class="mb-8">
+            <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h1 class="text-3xl font-bold text-green-600 mb-2">{% trans "Pre-Registration Complete!" %}</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300">{% trans "Your visitor pass has been generated successfully." %}</p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Visitor Details -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h2 class="text-xl font-semibold mb-4">{% trans "Visitor Details" %}</h2>
+                <div class="space-y-3 text-left">
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Name:" %}</span>
+                        <span>{{ visitor.full_name }}</span>
+                    </div>
+                    {% if visitor.pass_number %}
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Pass Number:" %}</span>
+                        <span class="text-2xl font-bold text-blue-600">{{ visitor.pass_number }}</span>
+                    </div>
+                    {% else %}
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Status:" %}</span>
+                        <span class="text-lg font-bold text-yellow-600">{% trans "Pending Verification" %}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "OTP:" %}</span>
+                        <span class="text-xl font-bold text-green-600">{{ pre_registration.otp }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Company:" %}</span>
+                        <span>{{ visitor.company|default:"-" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Category:" %}</span>
+                        <span>{{ visitor.category.name }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Host:" %}</span>
+                        <span>{{ pre_registration.registered_by.get_full_name|default:pre_registration.registered_by.username }}</span>
+                    </div>
+                    {% if pre_registration.expected_arrival_date %}
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Expected Arrival:" %}</span>
+                        <span>
+                            {{ pre_registration.expected_arrival_date|date:"F d, Y" }}
+                            {% if pre_registration.expected_arrival_time %}
+                                at {{ pre_registration.expected_arrival_time|time:"g:i A" }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if visitor.vehicle_number %}
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Vehicle:" %}</span>
+                        <span>{{ visitor.vehicle_number }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between">
+                        <span class="font-medium">{% trans "Purpose:" %}</span>
+                        <span>{{ visitor.purpose|default:"-" }}</span>
+                    </div>
+                </div>
+                
+                <!-- ALPR Whitelist Status -->
+                {% if visitor.vehicle_number and whitelist_result %}
+                <div class="mt-4 p-3 rounded-lg {% if whitelist_result.success %}bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800{% else %}bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800{% endif %}">
+                    <div class="flex items-start">
+                        {% if whitelist_result.success %}
+                        <svg class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                                {% trans "Vehicle Whitelisted" %}
+                            </p>
+                            <p class="text-xs text-green-700 dark:text-green-300 mt-1">
+                                {{ whitelist_result.message }}
+                            </p>
+                        </div>
+                        {% else %}
+                        <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                                {% trans "Whitelist Warning" %}
+                            </p>
+                            <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                                {% trans "Vehicle saved but ALPR whitelist failed:" %} {{ whitelist_result.error }}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- QR Code -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h2 class="text-xl font-semibold mb-4">{% trans "QR Code for Verification" %}</h2>
+                {% if qr_code_url %}
+                    <div class="bg-white p-4 rounded-lg inline-block">
+                        <img src="{{ qr_code_url }}" alt="QR Code" class="w-48 h-48 mx-auto">
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 mt-4">
+                        {% trans "Show this QR code to security for quick verification" %}
+                    </p>
+                {% else %}
+                    <div class="bg-gray-200 dark:bg-gray-700 p-8 rounded-lg">
+                        <p class="text-gray-500">{% trans "QR Code not available" %}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="glassmorphism rounded-xl p-6 mt-8">
+            <h2 class="text-xl font-semibold mb-4">{% trans "Instructions" %}</h2>
+            <div class="text-left space-y-2">
+                <p class="flex items-start">
+                    <span class="text-blue-600 font-bold mr-2">1.</span>
+                    {% trans "Save or screenshot this page for your records" %}
+                </p>
+                <p class="flex items-start">
+                    <span class="text-blue-600 font-bold mr-2">2.</span>
+                    {% trans "Present the QR code or provide your Pass Number and OTP to security" %}
+                </p>
+                <p class="flex items-start">
+                    <span class="text-blue-600 font-bold mr-2">3.</span>
+                    {% trans "This pre-registration is valid for 24 hours from creation" %}
+                </p>
+                <p class="flex items-start">
+                    <span class="text-blue-600 font-bold mr-2">4.</span>
+                    {% trans "Contact the site if you need to make any changes" %}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex justify-center space-x-4 mt-8">
+            <button onclick="window.print()" 
+                    class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                {% trans "Print Pass" %}
+            </button>
+            <button onclick="downloadPass()" 
+                    class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                {% trans "Download Pass" %}
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function downloadPass() {
+    // Create a simple text file with pass details
+    const passDetails = `
+Visitor Pass Details
+===================
+Name: {{ visitor.full_name }}
+Pass Number: {{ visitor.pass_number }}
+OTP: {{ pre_registration.otp }}
+Company: {{ visitor.company|default:"-" }}
+Category: {{ visitor.category.name }}
+Vehicle: {{ visitor.vehicle_number|default:"-" }}
+Purpose: {{ visitor.purpose|default:"-" }}
+
+Instructions:
+1. Present this pass to security
+2. Valid for 24 hours
+3. Contact site for changes
+    `;
+    
+    const blob = new Blob([passDetails], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'visitor_pass_{{ visitor.pass_number }}.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

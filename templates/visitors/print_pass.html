@@ -1,0 +1,327 @@
+{% load tz %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Pass - {{ visitor.full_name }}</title>
+    <style>
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+
+        @media print {
+            body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .print-container { page-break-inside: avoid; border: none; }
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 5px;
+            background: white;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+
+        .print-container {
+            width: 220px;
+            margin: 0 auto;
+            padding: 10px;
+            border: 2px solid black;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid black;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+
+        .site-logo {
+            max-height: 40px;
+            margin-bottom: 5px;
+        }
+
+        .site-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .pass-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 3px 0 0 0;
+        }
+
+        .visitor-info {
+            margin: 10px 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
+
+        .info-label {
+            font-weight: bold;
+            width: 35%;
+        }
+
+        .info-value {
+            width: 65%;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .pass-number {
+            text-align: center;
+            margin: 12px 0;
+            padding: 8px;
+            border: 2px solid black;
+        }
+
+        .pass-number-label {
+            font-size: 10px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .pass-number-value {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .qr-section {
+            text-align: center;
+            margin: 10px 0;
+            padding: 5px;
+            border: 1px solid black;
+        }
+
+        .qr-code {
+            max-width: 80px;
+            height: auto;
+            margin: 5px 0;
+        }
+
+        .qr-label {
+            font-size: 9px;
+            margin-top: 3px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid black;
+            font-size: 9px;
+        }
+
+        .status-badge {
+            font-weight: bold;
+        }
+
+        .status-active {
+            color: black;
+        }
+
+        .status-expired {
+            text-decoration: line-through;
+        }
+
+        .print-actions {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border: 1px solid black;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 12px;
+            background: white;
+        }
+
+        .btn:hover {
+            background: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-actions no-print">
+        <button onclick="triggerPrint()" class="btn">PRINT</button>
+        <a href="{% url 'dashboard:index' %}" class="btn">BACK (<span id="countdown">5</span>s)</a>
+    </div>
+    
+    <div class="print-container">
+        <!-- Header -->
+        <div class="header">
+            {% if visitor.site.logo and visitor.site.logo.logo_image %}
+                <img src="{{ visitor.site.logo.logo_image.url }}" alt="{{ visitor.site.name }}" class="site-logo">
+            {% endif %}
+            <h1 class="site-name">{{ visitor.site.name }}</h1>
+            <p class="pass-title">VISITOR PASS</p>
+        </div>
+        
+        <!-- Pass Number -->
+        <div class="pass-number">
+            <div class="pass-number-label">Pass Number</div>
+            <div class="pass-number-value">{{ visitor.pass_number }}</div>
+        </div>
+        
+        <!-- Visitor Information -->
+        <div class="visitor-info">
+            <div class="info-row">
+                <span class="info-label">Name:</span>
+                <span class="info-value">{{ visitor.full_name }}</span>
+            </div>
+            
+            {% if visitor.company %}
+            <div class="info-row">
+                <span class="info-label">Company:</span>
+                <span class="info-value">{{ visitor.company }}</span>
+            </div>
+            {% endif %}
+            
+            {% if visitor.category %}
+            <div class="info-row">
+                <span class="info-label">Category:</span>
+                <span class="info-value">{{ visitor.category.name }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="info-row">
+                <span class="info-label">Contact:</span>
+                <span class="info-value">{{ visitor.contact_number }}</span>
+            </div>
+            
+            {% if visitor.access_pin %}
+            <div class="info-row">
+                <span class="info-label">PIN:</span>
+                <span class="info-value">{{ visitor.access_pin }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="info-row">
+                <span class="info-label">Check-in:</span>
+                <span class="info-value">{{ visitor.check_in_time|localtime|date:"d/m/y H:i" }}</span>
+            </div>
+            
+            {% if visitor.check_out_time %}
+            <div class="info-row">
+                <span class="info-label">Check-out:</span>
+                <span class="info-value">{{ visitor.check_out_time|localtime|date:"d/m/y H:i" }}</span>
+            </div>
+            {% endif %}
+            
+            {% if visitor.vehicle_number %}
+            <div class="info-row">
+                <span class="info-label">Vehicle:</span>
+                <span class="info-value">{{ visitor.vehicle_number }}</span>
+            </div>
+            {% endif %}
+            
+            {% if visitor.purpose %}
+            <div class="info-row">
+                <span class="info-label">Purpose:</span>
+                <span class="info-value">{{ visitor.purpose|truncatechars:20 }}</span>
+            </div>
+            {% endif %}
+            
+            {% if visitor.is_pre_registered and visitor.pre_registration %}
+            <div class="info-row">
+                <span class="info-label">Host:</span>
+                <span class="info-value">{{ visitor.pre_registration.registered_by.get_full_name|default:visitor.pre_registration.registered_by.username|truncatechars:15 }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="info-value">
+                    {% if visitor.check_out_time %}
+                        <span class="status-badge status-expired">OUT</span>
+                    {% else %}
+                        <span class="status-badge status-active">ACTIVE</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        
+        <!-- QR Code -->
+        <div class="qr-section">
+            <div style="font-weight: bold; margin-bottom: 5px;">VERIFICATION QR</div>
+            <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-code">
+            <div class="qr-label">Scan for verification</div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div>Printed: {{ print_time|localtime|date:"d/m/y H:i" }}</div>
+            <div style="margin-top: 3px;">
+                Valid only for this visitor<br>Present to security on request
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let timeLeft = 5;
+        let redirectTimer = null;
+        const countdownEl = document.getElementById('countdown');
+        const dashboardUrl = "{% url 'dashboard:index' %}";
+
+        function doRedirect() {
+            if (redirectTimer) clearInterval(redirectTimer);
+            window.location.href = dashboardUrl;
+        }
+
+        function startCountdown() {
+            if (redirectTimer) clearInterval(redirectTimer);
+            if (countdownEl) countdownEl.textContent = timeLeft;
+
+            redirectTimer = setInterval(function() {
+                timeLeft--;
+                if (countdownEl) {
+                    countdownEl.textContent = Math.max(0, timeLeft);
+                }
+                if (timeLeft <= 0) {
+                    doRedirect();
+                }
+            }, 1000);
+        }
+
+        function triggerPrint() {
+            window.print();
+        }
+
+        // Handle window focus when print dialog closes
+        window.addEventListener('focus', function() {
+            if (timeLeft <= 0) {
+                doRedirect();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                triggerPrint();
+            }
+        });
+
+        // Start countdown immediately on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startCountdown);
+        } else {
+            startCountdown();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - VMS{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-3xl font-bold">User Profile</h1>
+</div>
+
+<div class="glassmorphism-card">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <h2 class="text-xl font-semibold mb-4">Account Information</h2>
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400">Username</p>
+                <p class="font-medium">{{ user.username }}</p>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400">Email</p>
+                <p class="font-medium">{{ user.email }}</p>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400">Full Name</p>
+                <p class="font-medium">{{ user.first_name }} {{ user.last_name }}</p>
+            </div>
+        </div>
+        
+        <div>
+            <h2 class="text-xl font-semibold mb-4">Role Information</h2>
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400">Role</p>
+                <p class="font-medium">
+                    {% if user.profile.is_admin %}
+                     Administrator
+                     {% elif user.profile.is_security_officer %}
+                    Security Officer
+                    {% else %}
+                    Standard User
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400">Phone</p>
+                <p class="font-medium">{{ user.profile.phone|default:"Not provided" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

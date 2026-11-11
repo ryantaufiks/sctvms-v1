@@ -1,0 +1,351 @@
+Technical Documentation - Visitor Management System (VMS)
+
+1) Overview
+- This project is a Django-based Visitor Management System (VMS) with modules for accounts/auth, visitor flows (pre-registration, verification, check-in/out), dashboards, reports, site settings, and user management.
+- The application is structured as a multi-app Django project with shared base templates, i18n routing, and a TailwindCSS front-end layer.
+
+2) Technology Stack
+- Language/Framework: Python (3.x) + Django 4.2.23
+- Templating: Django Templates with TailwindCSS via CDN
+- Database (default): SQLite (db.sqlite3) for development
+- Database (production recommended): PostgreSQL (commented example provided in settings)
+- Caching: Django default local-memory cache (LocMem) unless overridden
+- Logging: Python logging with RotatingFileHandler for app and performance logs
+- Internationalization: i18n with English, Simplified Chinese, Bahasa Melayu
+
+3) Project Structure (apps and roles)
+- accounts: authentication views, decorators, URLs
+- visitors: core VMS flows (pre-registration, OTP verification, check-in/out, printing passes)
+- dashboard: summarized metrics views and dashboard page
+- site_settings: site configuration, categories, general settings
+- user_management: user CRUD and management screens
+- reports: analytics and printable/downloadable reports
+- templates/: global templates including base.html and per-app pages
+- static/: shared static assets; staticfiles/ used for collected static in deployment
+
+4) Configuration & Environment
+- Central config in settings file. Key flags are environment-driven with safe defaults for development.
+  - SECRET_KEY: DJANGO_SECRET_KEY (must be set in production)
+  - DEBUG: DJANGO_DEBUG (True/False)
+  - ALLOWED_HOSTS: DJANGO_ALLOWED_HOSTS (comma-separated)
+  - Security: DJANGO_SESSION_COOKIE_SECURE, DJANGO_CSRF_COOKIE_SECURE, DJANGO_SECURE_SSL_REDIRECT, DJANGO_X_FRAME_OPTIONS
+  - CSRF trusted origins: DJANGO_CSRF_TRUSTED_ORIGINS (comma-separated)
+- Templates path: templates/
+- Apps registered: accounts, visitors, dashboard, site_settings, user_management, reports
+- Middlewares: include SecurityMiddleware, Session, Locale, Common, CSRF, Auth, Messages, Clickjacking
+
+5) URLs & Routing
+- Root URLConf defines:
+  - i18n/ for language switching
+  - Admin mounted at /superadmin/
+  - App routes: /accounts/, /dashboard/, /visitors/, /settings/, /users/, /reports/
+  - Auth routes: /login/, /logout/
+  - Default root redirects to login
+- i18n_patterns used with prefix_default_language=False to keep clean URLs.
+
+6) Database
+- Default: SQLite file at db.sqlite3 (suitable for development/demo).
+- Production: Use PostgreSQL (sample configuration is commented in settings). Configure NAME, USER, PASSWORD, HOST, PORT.
+- Migrations: Standard Django migrations per app. Run: python manage.py makemigrations && python manage.py migrate
+- Default primary key: BigAutoField.
+
+7) Security
+- Critical: Set a strong SECRET_KEY via environment in production.
+- DEBUG must be False in production.
+- Set ALLOWED_HOSTS appropriately (no wildcards in production).
+- Cookies and SSL:
+  - SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE should be True behind HTTPS
+  - SECURE_SSL_REDIRECT=True to enforce HTTPS (behind a reverse proxy/SSL terminator)
+  - X_FRAME_OPTIONS default DENY
+- CSRF protection is enabled by middleware and templates use CSRF tokens by default.
+- Auth:
+  - LOGIN_URL=login, LOGIN_REDIRECT_URL=dashboard, LOGOUT_REDIRECT_URL=login
+  - Default password validators enabled: similarity, minimum length, common password, numeric
+- Admin surface reduced from /admin/ to /superadmin/ (security-by-obscurity measure only; still use strong auth/2FA and IP allow lists where possible).
+
+8) Internationalization & Localization
+- Languages: en (English), zh-hans (Simplified Chinese), ms (Bahasa Melayu)
+- LOCALE_PATHS points to locale/ for translations
+- i18n URL patterns enabled; language switch via /i18n/
+- Templates can use translation tags and data-translate attributes.
+
+9) Static & Media
+- Static:
+  - STATIC_URL=static/
+  - STATICFILES_DIRS includes ./static
+  - STATIC_ROOT=./staticfiles (collect here during deployment)
+- Media:
+  - MEDIA_URL=/media/
+  - MEDIA_ROOT=./media (stores generated assets like QR codes)
+- Front-end:
+  - TailwindCSS via CDN in base template; supports dark mode with a lightweight glassmorphism style.
+
+10) Logging & Monitoring
+- Handlers:
+  - file_performance: RotatingFileHandler -> logs/performance.log (5MB, 3 backups), formatter=verbose
+  - file_app: RotatingFileHandler -> logs/app.log (5MB, 3 backups), formatter=verbose
+  - console: stream handler; level depends on DEBUG
+- Loggers:
+  - vms.performance -> performance + console
+  - django -> console
+  - django.request -> app + console (warning in prod)
+  - django.db.backends -> console (debug in dev)
+  - Per-app loggers: accounts, visitors, dashboard, site_settings, user_management, reports -> app + console
+- The logs directory is auto-created on startup if missing.
+
+11) Caching & Throttling
+- Cache backend: default LocMemCache (in-process) unless overridden with CACHES setting.
+- View-level throttling implemented (defensive rate limit):
+  - OTP verification (visitors.verify_visitor)
+  - Pre-registration verification/rejection (visitors.verify_pre_registration)
+  - Strategy: per-user (if authenticated) + per-IP composite key, 10 attempts per 60 seconds. Exceeding the limit returns a friendly message and blocks the action during the window.
+  - For production, consider using a shared cache like Redis for multi-process instances and consistent limits across workers.
+
+12) Authentication & Authorization
+- Uses Django’s built-in authentication and session framework.
+- Custom login_view/logout_view are wired in root URLs. Post-login default is dashboard.
+- Per-view decorators and checks are used in app views where needed (e.g., ensuring only staff or the intended operator can take specific actions).
+
+13) Templates & UX Notes
+- Base layout includes a compact header, responsive content, and light/dark theme support.
+- Dashboard cards were simplified (reduced paddings and typography) to improve scanability and performance.
+- Components follow Tailwind utility classes for rapid UI adjustments.
+
+14) Deployment Guide (high level)
+- Environment variables (required in production):
+  - DJANGO_SECRET_KEY, DJANGO_DEBUG=False, DJANGO_ALLOWED_HOSTS, DJANGO_SESSION_COOKIE_SECURE=True, DJANGO_CSRF_COOKIE_SECURE=True, DJANGO_SECURE_SSL_REDIRECT=True, DJANGO_X_FRAME_OPTIONS=DENY, DJANGO_CSRF_TRUSTED_ORIGINS=https://your.domain
+- Database: Configure PostgreSQL credentials; run migrate.
+- Static: python manage.py collectstatic (ensure STATIC_ROOT write permissions)
+- WSGI/ASGI: Use gunicorn/uvicorn+daphne under a process supervisor; set up reverse proxy (Nginx) with HTTPS.
+- File system: Ensure logs/ and media/ are writable by the app user; mount external persistent volumes in containers.
+- Monitoring: Forward app.log and performance.log to centralized logging if available.
+
+15) Backup & Retention
+- Database: For SQLite dev, back up db.sqlite3. In production, back up PostgreSQL via dumps or snapshots.
+- Media: Back up ./media/ regularly (contains generated QR codes and user-uploaded site assets like logos).
+- Logs: Rotated automatically (5MB x 3). Consider log shipping/retention policies.
+
+16) Known Defaults & Considerations
+- SECRET_KEY has a development default; must be overridden in production.
+- Default cache is process-local; move to Redis/Memcached for multi-instance deployments.
+- Email/SMS gateways (if later integrated for OTP) should use environment-based credentials and never be committed.
+- Admin at /superadmin/ is a minor hardening step; use SSO/2FA and IP restrictions for real security.
+
+17) Common Commands
+- Run dev server: python manage.py runserver 0.0.0.0:8004
+- Make migrations: python manage.py makemigrations
+- Apply migrations: python manage.py migrate
+- Create superuser: python manage.py createsuperuser
+- Collect static: python manage.py collectstatic
+
+18) Future Enhancements (optional)
+- Switch to Redis cache + django-ratelimit for more robust throttling.
+- Move Tailwind to a compiled build with purge for smaller CSS and better performance.
+- Adopt DRF for API endpoints (if mobile/third-party integrations are planned).
+- Add Sentry/structured logging for error monitoring.
+- Enforce CSP/Referrer-Policy/Secure headers via middleware and proxy config.
+
+19) Latest Updates (Sep 2025)
+- Restricted Pre-Registration Reports from Security Officer role:
+  - Added a backend guard on the pre-registration reports view that redirects Security Officers to the Reports dashboard with an error message.
+  - Hid the Pre-Registration Reports card on the Reports dashboard for Security Officer users.
+- Settings navigation restricted to Admin only:
+  - The Settings tab/link is hidden from Management and Staff in both desktop and mobile navigation; Admin retains access.
+- Staff recent pre-registrations privacy:
+  - On the Pre-Registration page, Staff now see only their own items in the "Recent Pre-Registrations" sidebar; Management/Admin continue to see the latest 10 globally.
+
+20) Feature List (Current)
+- Authentication & Roles
+  - Login/Logout flows
+  - Roles: Admin, Management, Staff, Security Officer
+  - Per-view role decorators and guards (e.g., admin_required, management_or_admin_required, staff_or_above_required, security_officer_required, can_view_reports)
+  - Role-based navigation visibility (e.g., Settings only for Admin)
+- Visitor Pre-Registration
+  - Create pre-registrations for visitors with host/creator attribution
+  - Generate unique link for visitor details completion with a time-limited window
+  - QR code generation and storage under media/qr_codes
+  - Recent Pre-Registrations sidebar: Staff see only their own; Management/Admin see global recent
+  - Pre-registration list with search, status/date filters, pagination
+- Verification & Check-in/Check-out
+  - OTP/QR verification flow for Security Officers
+  - Mark pre-registrations as used upon verification; generate pass number
+  - Print visitor pass
+  - Bulk checkout
+  - Delete single/bulk visitors (Admin only)
+- ALPR Integration
+  - Manual plate scanning via "Scan Plate" button on visitor registration forms
+  - Integration with Dahua ALPR cameras using Digest Authentication
+  - Automatic vehicle number field population from scanned plates
+  - Plate image capture and storage with visitor records
+  - Base64 image encoding for secure transfer
+  - Error handling for camera connectivity and authentication issues
+  - Auto-whitelisting functionality for pre-registered visitors
+    - Automatic whitelist entry creation upon pre-registration submission
+    - Expiry time calculation based on expected arrival date/time
+    - Integration with Dahua camera whitelist management
+    - Whitelist status notifications on pre-registration success page
+  - ALPR Whitelist Management
+    - ALPRWhitelist model for tracking whitelisted plate numbers
+    - Admin interface for viewing and managing whitelist entries
+    - API endpoints for whitelist operations (add, remove, status)
+    - Filtering and search capabilities by plate number, visitor, status
+    - Automatic expiry handling and cleanup
+    - Camera synchronization status tracking
+- Reporting
+  - Reports dashboard and analytics
+  - Visitor reports with filters and column visibility controls
+  - Pre-Registration reports (access restricted for Security Officers)
+  - Data export capabilities where applicable
+- Site Settings
+  - Manage sites, visitor categories, and general site configuration
+  - Settings dashboard available via navigation for Admin only
+- User Management
+  - Admin can list/create/edit users and set roles
+- Dashboard
+  - High-level overview and quick links to key actions
+- Internationalization
+  - English, Simplified Chinese, Bahasa Melayu support with in-app language switching
+- Logging & Monitoring
+  - Rotating logs for application and performance; DB debug logs in development
+- Security & Throttling
+  - CSRF/session protections; HTTPS-ready settings
+  - Defensive rate-limiting for OTP/verification actions
+- Media & Static
+  - QR code media storage; TailwindCSS-based UI with dark mode
+  - Plate image storage for ALPR scanned vehicle plates
+
+21) System Flows
+- Pre-Registration (Staff/Management/Admin)
+  1. User navigates to /visitors/pre-register/ and submits visitor details (host/contact, category, optional address and purpose).
+  2. System creates a Visitor with is_pre_registered=True and a linked PreRegistration record (unique_link UUID, OTP, optional QR code image saved under media/qr_codes/).
+  3. For pre-registered visitors, a pass number is auto-generated in the form PR#### when saved. The Visitor may have check_in_time set later upon verification. See logic in visitor save for timing rules.
+  4. Sidebar shows Recent Pre-Registrations: Staff see only their own; Management/Admin see the latest 10 globally.
+
+- Arrival & Verification (Security Officer)
+  1. Visitor presents QR or OTP at the checkpoint. Security Officer uses the verify flow to validate PreRegistration.
+  2. Validation checks: not expired and within the valid window around expected arrival time (1 hour before to 3 hours after if set). On success, PreRegistration.is_verified=True, verified_by and verified_at are set.
+  3. Upon verification, pre-registered Visitor gets check_in_time set (if not already) based on model save rules; pass number already exists as PR####.
+
+- Walk-in Registration (Security Officer)
+  1. Security Officer registers a new Visitor without pre-registration.
+  2. On save, Visitor gets a unique 6-digit numeric pass_number and check_in_time set automatically.
+
+- ALPR Plate Scanning
+  1. User clicks "Scan Plate" button on visitor registration form.
+  2. System connects to configured Dahua ALPR camera using Digest Authentication.
+  3. Camera snapshot is captured and processed for plate number extraction.
+  4. Vehicle number field is automatically populated with detected plate number.
+  5. Plate image is encoded in Base64 and stored with visitor record.
+  6. Error handling displays appropriate messages for connection or authentication failures.
+
+- ALPR Auto-Whitelisting (Pre-Registration)
+  1. Upon pre-registration form submission with vehicle number, system automatically creates ALPRWhitelist entry.
+  2. Expiry time is calculated based on expected arrival date/time (default 24 hours if no arrival time specified).
+  3. System attempts to send whitelist command to configured Dahua ALPR camera.
+  4. Whitelist status (success/failure) is displayed on pre-registration success page.
+  5. ALPRWhitelist entry tracks camera sync status and provides audit trail.
+
+- ALPR Whitelist Management (Admin/Staff)
+  1. Admin/Staff can access whitelist management interface via navigation menu.
+  2. Interface displays active and expired whitelist entries with filtering options.
+  3. Manual whitelist entries can be added for specific plate numbers with custom expiry.
+  4. Existing whitelist entries can be removed before expiry if needed.
+  5. API endpoints support programmatic whitelist operations for integration.
+
+- Printing
+  1. After verification or walk-in registration, a printable pass is available from the UI.
+
+- Check-out (Security Officer)
+  1. From the checkout screen, marking a visitor as checked out sets check_out_time.
+
+- Reporting & Access
+  1. Reports dashboard available to permitted roles. Security Officers do not see Pre-Registration Reports and are blocked server-side from accessing that endpoint.
+  2. Exports for applicable reports are available to roles allowed by the view guards.
+
+- Settings & User Management
+  1. Admin-only Settings navigation to manage sites, categories, field visibility/configs, backup preferences, etc.
+  2. Admin user management: create/edit users and assign roles.
+
+22) Database Structure & Relationships
+- Accounts
+  - User (Django auth_user): core authentication object.
+  - UserProfile: 1-1 with User; fields: role [admin, management, staff, security_officer], phone_number, timestamps. Used for role checks and navigation visibility.
+
+- Site Settings
+  - Site: name, address, contact info, is_active, timestamps.
+  - SiteLogo: 1-1 Site; logo_light, logo_dark, alt_text.
+  - SiteConfiguration: 1-1 Site; toggles for dark mode, default language, form field enablement, pre-registration, QR/OTP, printer, and backup preferences.
+  - AddressConfiguration: 1-1 Site; enables and labels for tower/level/unit with options lists.
+  - FormFieldConfiguration: N-1 Site; per-field metadata (type, required/enabled, help/placeholder, order, options, validation rules), unique per (site, field_name).
+  - VisitorCategory: N-1 Site; name, is_active.
+
+- Visitors & Pre-Registrations
+  - Visitor: N-1 VisitorCategory (nullable, SET_NULL); fields include ic_last_digits, full_name, contact_number, vehicle_number, company, address fields (tower/level/unit), purpose, check_in_time, check_out_time, is_pre_registered, pass_number (unique), plate_image (ImageField for ALPR scanned plates), created/updated.
+    - Indexes: check_in_time, check_out_time, category, is_pre_registered, pass_number.
+    - Behavior: On save, generates pass_number if absent; PR#### for pre-registered, 6-digit numeric for walk-ins. Automatically sets check_in_time for walk-ins or when a linked pre-registration becomes verified.
+  - PreRegistration: 1-1 Visitor (CASCADE); registered_by: N-1 User (CASCADE); verified_by: N-1 User (SET_NULL);
+    - Fields: unique_link (UUID, unique), otp, qr_code (ImageField, media/qr_codes/), is_used, is_verified, verified_at, expected_arrival_date/time, expires_at, created/updated.
+    - Computed: is_expired; is_qr_otp_valid (valid window around expected arrival when set).
+  - ALPRWhitelist: N-1 Visitor (nullable, SET_NULL); created_by: N-1 User (SET_NULL);
+    - Fields: plate_number (unique), expires_at, is_camera_synced, camera_sync_error, created_at, updated_at.
+    - Computed: is_expired (expires_at < now).
+    - Behavior: Tracks whitelisted plate numbers for ALPR camera integration with expiry management.
+
+- Key Relationships (text ERD)
+  - auth_user 1—1 UserProfile
+  - auth_user 1—N PreRegistration.registered_by
+  - auth_user 1—N PreRegistration.verified_by
+  - auth_user 1—N ALPRWhitelist.created_by
+  - Site 1—1 SiteLogo
+  - Site 1—1 SiteConfiguration
+  - Site 1—1 AddressConfiguration
+  - Site 1—N FormFieldConfiguration
+  - Site 1—N VisitorCategory
+  - VisitorCategory 1—N Visitor
+  - Visitor 1—1 PreRegistration
+  - Visitor 1—N ALPRWhitelist
+
+- Deletion/On-Delete Behavior
+  - Visitor.category: SET_NULL
+  - PreRegistration.visitor: CASCADE (deleting Visitor deletes PreRegistration)
+  - PreRegistration.registered_by: CASCADE (deleting User removes their created pre-registrations)
+  - PreRegistration.verified_by: SET_NULL
+  - ALPRWhitelist.visitor: SET_NULL (deleting Visitor preserves whitelist entry)
+  - ALPRWhitelist.created_by: SET_NULL (deleting User preserves whitelist entry)
+  - SiteLogo/SiteConfiguration/AddressConfiguration: CASCADE via their 1-1 Site relations
+  - VisitorCategory.site and FormFieldConfiguration.site: CASCADE (deleting Site removes dependent records)
+
+- Notable Constraints
+  - Visitor.pass_number unique
+  - PreRegistration.unique_link unique
+  - FormFieldConfiguration unique per (site, field_name)
+
+References
+- Models
+  - Visitors: Visitor, PreRegistration, ALPRWhitelist
+  - Accounts: UserProfile
+  - Site Settings: Site, SiteLogo, SiteConfiguration, AddressConfiguration, FormFieldConfiguration, VisitorCategory
+
+
+Diagrams (SVG)
+- ER Diagram: static/diagrams/er_diagram.svg
+- Sequence Diagram (Pre-Registration): static/diagrams/sequence_preregistration.svg
+- Sequence Diagram (Verification): static/diagrams/sequence_verification.svg
+
+Technical Documentation – Monolith VMS
+
+Development Server
+- Always run with: `python manage.py runserver 0.0.0.0:8004`
+- Access locally at: `http://127.0.0.1:8004/`
+- Admin at: `http://127.0.0.1:8004/admin/`
+
+Self Registration (Face + PIN)
+- Visitor model includes: access_pin, face_image, terminal_user_id
+- Self-register flow provisions visitor to Hikvision Face Terminal for 24 hours
+- Print Pass includes PIN and instructions for terminal access
+
+Hikvision Integration
+- ISAPI endpoints used for user provisioning (face + PIN)
+- User created per visit with unique `employeeNo` (pass_number)
+- Face image uploaded via multipart to terminal
+- PIN set using password endpoint

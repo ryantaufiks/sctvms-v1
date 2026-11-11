@@ -1,0 +1,666 @@
+{% extends 'base.html' %}
+
+{% block title %}Resident Management{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="glassmorphism rounded-xl p-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">Resident Management</h1>
+            
+        </div>
+        <a href="{% url 'site_settings:settings_dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Settings
+        </a>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="glassmorphism rounded-xl p-2">
+        <div class="flex gap-2">
+            <a href="{% url 'residents:management' %}?tab=resident" class="px-4 py-2 rounded-lg {% if active_tab == 'resident' %}bg-blue-600 text-white{% else %}bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700{% endif %}">Resident</a>
+            <a href="{% url 'residents:management' %}?tab=vehicle" class="px-4 py-2 rounded-lg {% if active_tab == 'vehicle' %}bg-blue-600 text-white{% else %}bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700{% endif %}">Vehicle</a>
+        </div>
+    </div>
+
+    {% if active_tab == 'resident' %}
+    <!-- Resident Report -->
+    <div class="glassmorphism rounded-xl p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">Resident Report</h2>
+            <button id="openAddResident" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Resident</button>
+        </div>
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <input type="hidden" name="tab" value="resident" />
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium mb-1">Search</label>
+                <input type="text" name="q" value="{{ filters.q }}" placeholder="Search by resident name" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Status</label>
+                <select name="status" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            {% if address_config and address_config.enable_tower %}
+            <div>
+                <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
+                <select name="tower" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    {% for t in address_config.tower_options %}
+                    <option value="{{ t }}" {% if filters.tower == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            {% if address_config and address_config.enable_level %}
+            <div>
+                <label class="block text-sm font-medium mb-1">{{ address_config.level_label }}</label>
+                <select name="level" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    {% for lv in address_config.level_options %}
+                    <option value="{{ lv }}" {% if filters.level == lv %}selected{% endif %}>{{ lv }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            {% if address_config and address_config.enable_unit %}
+            <div>
+                <label class="block text-sm font-medium mb-1">{{ address_config.unit_label }}</label>
+                <select name="unit" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    {% for u in address_config.unit_options %}
+                    <option value="{{ u }}" {% if filters.unit == u %}selected{% endif %}>{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="md:col-span-5 flex gap-3 justify-end">
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Apply Filters</button>
+                <a href="{% url 'residents:management' %}?tab=resident" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Reset</a>
+            </div>
+        </form>
+        <div class="mt-4 overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 text-left">Resident Name</th>
+                        {% if address_config and address_config.enable_tower %}
+                        <th class="px-4 py-2 text-left">{{ address_config.tower_label }}</th>
+                        {% else %}
+                        <th class="px-4 py-2 text-left">Tower</th>
+                        {% endif %}
+                        {% if address_config and address_config.enable_level %}
+                        <th class="px-4 py-2 text-left">{{ address_config.level_label }}</th>
+                        {% else %}
+                        <th class="px-4 py-2 text-left">Level</th>
+                        {% endif %}
+                        {% if address_config and address_config.enable_unit %}
+                        <th class="px-4 py-2 text-left">{{ address_config.unit_label }}</th>
+                        {% else %}
+                        <th class="px-4 py-2 text-left">Unit</th>
+                        {% endif %}
+                        <th class="px-4 py-2 text-left">Phone</th>
+                        <th class="px-4 py-2 text-left">Email</th>
+                        <th class="px-4 py-2 text-left">Active Vehicles</th>
+                        <th class="px-4 py-2 text-left">Status</th>
+                        <th class="px-4 py-2 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in residents_page %}
+                    <tr class="border-t">
+                        <td class="px-4 py-2">{{ r.full_name }}</td>
+                        <td class="px-4 py-2">{{ r.tower }}</td>
+                        <td class="px-4 py-2">{{ r.level }}</td>
+                        <td class="px-4 py-2">{{ r.unit }}</td>
+                        <td class="px-4 py-2">{{ r.phone_number }}</td>
+                        <td class="px-4 py-2">{{ r.email }}</td>
+                        <td class="px-4 py-2">{{ r.vehicles_count }}</td>
+                        <td class="px-4 py-2">{% if r.is_active %}<span class="text-green-600">Active</span>{% else %}<span class="text-gray-500">Inactive</span>{% endif %}</td>
+                        <td class="px-4 py-2">
+                            <a href="{% url 'residents:management' %}?tab=resident&edit_resident_id={{ r.id }}" class="text-blue-600 hover:underline mr-3">Edit</a>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="delete_resident" />
+                                <input type="hidden" name="resident_id" value="{{ r.id }}" />
+                                <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete resident?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td class="px-4 py-2" colspan="9">No residents found with current filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="9" class="px-4 py-2">
+                            <div class="mt-3 flex items-center justify-between">
+                                <span>Page {{ residents_page.number }} of {{ residents_page.paginator.num_pages }}</span>
+                                <div class="flex gap-2">
+                                    {% if residents_page.has_previous %}
+                                    <a href="{% url 'residents:management' %}?tab=resident&rpage={{ residents_page.previous_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Prev</a>
+                                    {% endif %}
+                                    {% if residents_page.has_next %}
+                                    <a href="{% url 'residents:management' %}?tab=resident&rpage={{ residents_page.next_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Next</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Resident Modal -->
+    <div id="addResidentModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Add Resident</h3>
+                <button id="closeAddResident" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_resident" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Full Name</label>
+                        {{ resident_form.full_name }}
+                    </div>
+                    {% if address_config and address_config.enable_tower %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
+                        {{ resident_form.tower }}
+                    </div>
+                    {% endif %}
+                    {% if address_config and address_config.enable_level %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">{{ address_config.level_label }}</label>
+                        {{ resident_form.level }}
+                    </div>
+                    {% endif %}
+                    {% if address_config and address_config.enable_unit %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">{{ address_config.unit_label }}</label>
+                        {{ resident_form.unit }}
+                    </div>
+                    {% else %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Unit</label>
+                        {{ resident_form.unit }}
+                    </div>
+                    {% endif %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Phone Number</label>
+                        {{ resident_form.phone_number }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email</label>
+                        {{ resident_form.email }}
+                    </div>
+                    <div class="md:col-span-2">{{ resident_form.is_active }}</div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1">Face Image (optional)</label>
+                        {{ resident_form.face_image }}
+                        <div class="mt-2 flex items-center gap-2">
+                            <button type="button" id="validateFaceBtn" class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Validate Photo</button>
+                            <span id="validateStatus" class="text-sm text-gray-500"></span>
+                        </div>
+                        <img id="facePreview" alt="Face Preview" class="mt-3 rounded hidden" style="max-height: 160px;" />
+                        <p class="text-xs text-gray-500 mt-1">Photo should be front-facing, well-lit, single face.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">FR Valid From</label>
+                        {{ resident_form.fr_start_time }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">FR Valid Until</label>
+                        {{ resident_form.fr_end_time }}
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end gap-3">
+                    <button type="button" id="cancelAddResident" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Save Resident</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if active_tab == 'vehicle' %}
+    <!-- Vehicle Report -->
+    <div class="glassmorphism rounded-xl p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">Vehicle Report</h2>
+            <button id="openAddVehicle" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add Vehicle</button>
+        </div>
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <input type="hidden" name="tab" value="vehicle" />
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium mb-1">Search</label>
+                <input type="text" name="q" value="{{ filters.q }}" placeholder="Search by plate or resident name" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Status</label>
+                <select name="status" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            {% if address_config and address_config.enable_tower %}
+            <div>
+                <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
+                <select name="tower" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    {% for t in address_config.tower_options %}
+                    <option value="{{ t }}" {% if filters.tower == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            {% if address_config and address_config.enable_level %}
+            <div>
+                <label class="block text-sm font-medium mb-1">{{ address_config.level_label }}</label>
+                <select name="level" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    {% for lv in address_config.level_options %}
+                    <option value="{{ lv }}" {% if filters.level == lv %}selected{% endif %}>{{ lv }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            {% if address_config and address_config.enable_unit %}
+            <div>
+                <label class="block text-sm font-medium mb-1">{{ address_config.unit_label }}</label>
+                <select name="unit" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">All</option>
+                    {% for u in address_config.unit_options %}
+                    <option value="{{ u }}" {% if filters.unit == u %}selected{% endif %}>{{ u }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="md:col-span-5 flex gap-3 justify-end">
+                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Apply Filters</button>
+                <a href="{% url 'residents:management' %}?tab=vehicle" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Reset</a>
+            </div>
+        </form>
+        <div class="mt-4 overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 text-left">Resident Name</th>
+                        <th class="px-4 py-2 text-left">Plate No 1</th>
+                        <th class="px-4 py-2 text-left">Plate No 2</th>
+                        <th class="px-4 py-2 text-left">Plate No 3</th>
+                        <th class="px-4 py-2 text-left">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in vehicles_page %}
+                    <tr class="border-t">
+                        <td class="px-4 py-2">{{ row.resident.full_name }}</td>
+                        <td class="px-4 py-2">
+                            {% if row.plates|length > 0 %}
+                                {{ row.plates.0.plate_number }}
+                                <a href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ row.plates.0.id }}" class="text-blue-600 hover:underline ml-2">Edit</a>
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_vehicle" />
+                                    <input type="hidden" name="vehicle_id" value="{{ row.plates.0.id }}" />
+                                    <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete vehicle?')">Delete</button>
+                                </form>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-4 py-2">
+                            {% if row.plates|length > 1 %}
+                                {{ row.plates.1.plate_number }}
+                                <a href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ row.plates.1.id }}" class="text-blue-600 hover:underline ml-2">Edit</a>
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_vehicle" />
+                                    <input type="hidden" name="vehicle_id" value="{{ row.plates.1.id }}" />
+                                    <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete vehicle?')">Delete</button>
+                                </form>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-4 py-2">
+                            {% if row.plates|length > 2 %}
+                                {{ row.plates.2.plate_number }}
+                                <a href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ row.plates.2.id }}" class="text-blue-600 hover:underline ml-2">Edit</a>
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete_vehicle" />
+                                    <input type="hidden" name="vehicle_id" value="{{ row.plates.2.id }}" />
+                                    <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete vehicle?')">Delete</button>
+                                </form>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-4 py-2">{% if row.has_active %}<span class="text-green-600">Active</span>{% else %}<span class="text-gray-500">Inactive</span>{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td class="px-4 py-2" colspan="5">No vehicles found with current filters.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="5" class="px-4 py-2">
+                            <div class="mt-3 flex items-center justify-between">
+                                <span>Page {{ vehicles_page.number }} of {{ vehicles_page.paginator.num_pages }}</span>
+                                <div class="flex gap-2">
+                                    {% if vehicles_page.has_previous %}
+                                    <a href="{% url 'residents:management' %}?tab=vehicle&vpage={{ vehicles_page.previous_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Prev</a>
+                                    {% endif %}
+                                    {% if vehicles_page.has_next %}
+                                    <a href="{% url 'residents:management' %}?tab=vehicle&vpage={{ vehicles_page.next_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Next</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Vehicle Modal -->
+    <div id="addVehicleModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Add Vehicle</h3>
+                <button id="closeAddVehicle" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_vehicle" />
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium mb-1">Resident</label>
+                    <select name="resident_id" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                        <option value="" disabled selected>Select resident</option>
+                        {% for r in residents %}
+                        <option value="{{ r.id }}">{{ r.full_name }}{% if r.unit %} - {{ r.unit }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Plate Number</label>
+                    {{ vehicle_form.plate_number }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Start Time</label>
+                    {{ vehicle_form.start_time }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">End Time</label>
+                    {{ vehicle_form.end_time }}
+                </div>
+                <div class="md:col-span-2">{{ vehicle_form.is_active }}</div>
+                <div class="md:col-span-2 mt-2 flex justify-end gap-3">
+                    <button type="button" id="cancelAddVehicle" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
+                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Save Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if edit_resident_form %}
+    <!-- Edit Resident Modal -->
+    <div id="editResidentModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Edit Resident</h3>
+                <button id="closeEditResident" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_resident" />
+                <input type="hidden" name="resident_id" value="{{ edit_resident_form.instance.id }}" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Full Name</label>
+                        {{ edit_resident_form.full_name }}
+                    </div>
+                    {% if address_config and address_config.enable_tower %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
+                        {{ edit_resident_form.tower }}
+                    </div>
+                    {% endif %}
+                    {% if address_config and address_config.enable_level %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">{{ address_config.level_label }}</label>
+                        {{ edit_resident_form.level }}
+                    </div>
+                    {% endif %}
+                    {% if address_config and address_config.enable_unit %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">{{ address_config.unit_label }}</label>
+                        {{ edit_resident_form.unit }}
+                    </div>
+                    {% else %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Unit</label>
+                        {{ edit_resident_form.unit }}
+                    </div>
+                    {% endif %}
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Phone Number</label>
+                        {{ edit_resident_form.phone_number }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email</label>
+                        {{ edit_resident_form.email }}
+                    </div>
+                    <div class="md:col-span-2">{{ edit_resident_form.is_active }}</div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1">Face Image (optional)</label>
+                        {{ edit_resident_form.face_image }}
+                        <div class="mt-2 flex items-center gap-2">
+                            <button type="button" id="validateFaceBtnEdit" class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Validate Photo</button>
+                            <span id="validateStatusEdit" class="text-sm text-gray-500"></span>
+                        </div>
+                        <img id="facePreviewEdit" alt="Face Preview" class="mt-3 rounded hidden" style="max-height: 160px;" />
+                        <p class="text-xs text-gray-500 mt-1">Photo should be front-facing, well-lit, single face.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">FR Valid From</label>
+                        {{ edit_resident_form.fr_start_time }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">FR Valid Until</label>
+                        {{ edit_resident_form.fr_end_time }}
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end gap-3">
+                    <button type="button" id="cancelEditResident" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if edit_vehicle_form %}
+    <!-- Edit Vehicle Modal -->
+    <div id="editVehicleModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Edit Vehicle</h3>
+                <button id="closeEditVehicle" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_vehicle" />
+                <input type="hidden" name="vehicle_id" value="{{ edit_vehicle_form.instance.id }}" />
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium mb-1">Resident</label>
+                    <input type="text" value="{{ edit_vehicle_form.instance.resident.full_name }}{% if edit_vehicle_form.instance.resident.unit %} - {{ edit_vehicle_form.instance.resident.unit }}{% endif %}" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50" disabled />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Plate Number</label>
+                    {{ edit_vehicle_form.plate_number }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Start Time</label>
+                    {{ edit_vehicle_form.start_time }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">End Time</label>
+                    {{ edit_vehicle_form.end_time }}
+                </div>
+                <div class="md:col-span-2">{{ edit_vehicle_form.is_active }}</div>
+                <div class="md:col-span-2 mt-2 flex justify-end gap-3">
+                    <button type="button" id="cancelEditVehicle" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
+                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        // Modal toggles (vanilla JS)
+        const addResidentModal = document.getElementById('addResidentModal');
+        const addVehicleModal = document.getElementById('addVehicleModal');
+        const editResidentModal = document.getElementById('editResidentModal');
+        const editVehicleModal = document.getElementById('editVehicleModal');
+        const openAddResident = document.getElementById('openAddResident');
+        const openAddVehicle = document.getElementById('openAddVehicle');
+        const closeAddResident = document.getElementById('closeAddResident');
+        const closeAddVehicle = document.getElementById('closeAddVehicle');
+        const cancelAddResident = document.getElementById('cancelAddResident');
+        const cancelAddVehicle = document.getElementById('cancelAddVehicle');
+        const closeEditResident = document.getElementById('closeEditResident');
+        const cancelEditResident = document.getElementById('cancelEditResident');
+        const closeEditVehicle = document.getElementById('closeEditVehicle');
+        const cancelEditVehicle = document.getElementById('cancelEditVehicle');
+
+        function show(el) { if (el) { el.classList.remove('hidden'); el.classList.add('flex'); } }
+        function hide(el) { if (el) { el.classList.add('hidden'); el.classList.remove('flex'); } }
+
+        if (openAddResident) openAddResident.addEventListener('click', () => show(addResidentModal));
+        if (closeAddResident) closeAddResident.addEventListener('click', () => hide(addResidentModal));
+        if (cancelAddResident) cancelAddResident.addEventListener('click', () => hide(addResidentModal));
+
+        if (openAddVehicle) openAddVehicle.addEventListener('click', () => show(addVehicleModal));
+        if (closeAddVehicle) closeAddVehicle.addEventListener('click', () => hide(addVehicleModal));
+        if (cancelAddVehicle) cancelAddVehicle.addEventListener('click', () => hide(addVehicleModal));
+
+        if (closeEditResident) closeEditResident.addEventListener('click', () => hide(editResidentModal));
+        if (cancelEditResident) cancelEditResident.addEventListener('click', () => hide(editResidentModal));
+        if (closeEditVehicle) closeEditVehicle.addEventListener('click', () => hide(editVehicleModal));
+        if (cancelEditVehicle) cancelEditVehicle.addEventListener('click', () => hide(editVehicleModal));
+
+        // Auto-open edit modals when params present
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('edit_resident_id') && editResidentModal) {
+            show(editResidentModal);
+        }
+        if (params.get('edit_vehicle_id') && editVehicleModal) {
+            show(editVehicleModal);
+        }
+    </script>
+</div>
+
+<script>
+// Validate face photo using existing visitors API and show cropped preview
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('validateFaceBtn');
+  const input = document.querySelector('input[name="face_image"]');
+  const preview = document.getElementById('facePreview');
+  const statusEl = document.getElementById('validateStatus');
+  if (!btn || !input) return;
+  btn.addEventListener('click', async () => {
+    statusEl.textContent = '';
+    preview.classList.add('hidden');
+    if (!input.files || !input.files[0]) {
+      statusEl.textContent = 'Please choose a photo first.';
+      return;
+    }
+    try {
+      const file = input.files[0];
+      const b64 = await fileToBase64(file);
+      const payload = { pass_number: 'resident', imageData: b64 };
+      const resp = await fetch('/visitors/api/self-register/validate-photo/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (data.status === 'success' && data.preview) {
+        preview.src = data.preview;
+        preview.classList.remove('hidden');
+        statusEl.textContent = 'Photo OK: single face detected and cropped.';
+      } else {
+        statusEl.textContent = data.message || 'Photo not valid (no face or multiple faces).';
+      }
+    } catch (e) {
+      statusEl.textContent = 'Validation failed.';
+    }
+  });
+});
+
+// Edit modal face validation
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('validateFaceBtnEdit');
+  const modal = document.getElementById('editResidentModal');
+  const input = modal ? modal.querySelector('input[name="face_image"]') : null;
+  const preview = document.getElementById('facePreviewEdit');
+  const statusEl = document.getElementById('validateStatusEdit');
+  if (!btn || !input) return;
+  btn.addEventListener('click', async () => {
+    statusEl.textContent = '';
+    if (preview) preview.classList.add('hidden');
+    if (!input.files || !input.files[0]) {
+      statusEl.textContent = 'Please choose a photo first.';
+      return;
+    }
+    try {
+      const file = input.files[0];
+      const b64 = await fileToBase64(file);
+      const payload = { pass_number: 'resident', imageData: b64 };
+      const resp = await fetch('/visitors/api/self-register/validate-photo/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (data.status === 'success' && data.preview) {
+        if (preview) { preview.src = data.preview; preview.classList.remove('hidden'); }
+        statusEl.textContent = 'Photo OK: single face detected and cropped.';
+      } else {
+        statusEl.textContent = data.message || 'Photo not valid (no face or multiple faces).';
+      }
+    } catch (e) {
+      statusEl.textContent = 'Validation failed.';
+    }
+  });
+});
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function getCsrfToken() {
+  const name = 'csrftoken=';
+  const decoded = decodeURIComponent(document.cookie);
+  const parts = decoded.split(';');
+  for (let part of parts) {
+    part = part.trim();
+    if (part.startsWith(name)) return part.substring(name.length);
+  }
+  const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+  return el ? el.value : '';
+}
+</script>
+{% endblock %}

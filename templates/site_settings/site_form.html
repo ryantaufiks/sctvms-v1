@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if form.instance.id %}Edit{% else %}Add{% endif %} Site{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <div class="glassmorphism rounded-xl p-6">
+        <div class="flex justify-between items-center">
+            <h1 class="text-3xl font-bold mb-2">
+                {% if form.instance.id %}Edit{% else %}Add{% endif %} Site
+            </h1>
+            <a href="{% url 'site_settings:site_list' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Sites
+            </a>
+        </div>
+    </div>
+
+    <div class="glassmorphism rounded-xl p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ form.name.label }}</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.contact_number.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ form.contact_number.label }}</label>
+                    {{ form.contact_number }}
+                    {% if form.contact_number.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.contact_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ form.email.label }}</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ form.address.label }}</label>
+                {{ form.address }}
+                {% if form.address.errors %}
+                    <p class="text-red-500 text-sm mt-1">{{ form.address.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex justify-end space-x-4 mt-8">
+                <a href="{% url 'site_settings:site_list' %}" class="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    {% if form.instance.id %}Update{% else %}Create{% endif %} Site
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

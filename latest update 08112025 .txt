@@ -1,0 +1,72 @@
+Latest Update – 08/11/2025
+
+Ringkasan
+- Implementasi dan perbaikan seputar Pre-Registration dan Dashboard:
+  1) Auto‑populate Tower/Level/Unit pada Pre‑Registration
+  2) Tombol “Copy Registration Link” dengan clipboard dan toast
+  3) Perhitungan chip “Upcoming” di Dashboard sesuai Expected Arrival
+  4) Perhitungan chip “Today” menjumlah seluruh kategori (Visitor, Contractor, Delivery)
+
+Perubahan Utama
+1) Pre‑Registration: Auto‑populate Tower/Level/Unit
+- Konversi input teks menjadi dropdown yang mengambil opsi dari AddressConfiguration.
+- Label dan opsi mengikuti pengaturan admin; field disembunyikan jika dinonaktifkan.
+- Dampak: Konsistensi dengan form di Dashboard, mengurangi input bebas yang rawan kesalahan.
+
+2) Pre‑Registration: Tombol “Copy Registration Link” pada Recent Pre‑Registrations
+- Penambahan ikon/aksi untuk menyalin tautan pre‑registration ke clipboard.
+- Penambahan properti `pre_reg_link` (absolute URL) ke setiap item di context.
+- Implementasi JavaScript dengan `navigator.clipboard.writeText()` dan fallback `execCommand('copy')`.
+- Perbaikan: URL di‑escape dengan filter `escapejs` agar aman dari karakter khusus pada inline JS.
+
+3) Dashboard: Chip “Upcoming” (jumlah yang akan datang hari ini)
+- Logika dihitung langsung dari `PreRegistration` dengan kriteria:
+  - `expected_arrival_date = today`
+  - `is_verified = False`
+  - `visitor__check_in_time IS NULL`
+- Dampak: Lebih akurat untuk menampilkan tamu yang diharapkan datang hari ini, belum diverifikasi/masuk.
+
+4) Dashboard: Chip “Today” (total kunjungan hari ini)
+- Mengganti tampilan agar menampilkan total gabungan kategori yang check‑in pada hari ini:
+  - `today_total = visitors_today + contractors_today + deliveries_today`
+- “Today” tidak tergantung status sudah check out atau masih aktif (selama check‑in terjadi pada hari ini).
+
+File yang Diubah
+- `visitors/views.py`
+  - Menambahkan `address_config` ke context untuk Pre‑Register.
+  - Menambahkan absolute URL `pre_reg_link` ke setiap item `recent_pre_registrations`.
+- `templates/visitors/pre_register.html`
+  - Konversi Tower/Level/Unit menjadi dropdown berdasarkan AddressConfiguration.
+  - Menambahkan tombol ikon “Copy Registration Link” dan skrip clipboard + toast.
+  - Perbaikan keamanan: `onclick="copyPreRegLink('{{ pre_reg.pre_reg_link|escapejs }}')"`.
+- `dashboard/views.py`
+  - Mengubah perhitungan `upcoming_visitors_count` menggunakan `PreRegistration` (lihat kriteria pada poin 3).
+  - Menambahkan `today_total` ke context dan logika penghitungan.
+- `templates/dashboard/index.html`
+  - Chip “Today” kini menampilkan `{{ today_total }}`.
+
+Dampak / Kompatibilitas
+- Tidak ada migrasi database baru; semua perubahan bersifat view/template.
+- Fitur “Upcoming” kini lebih robust terhadap variasi data Visitor/PreRegistration.
+- Fitur “Copy Link” berfungsi di browser modern; fallback tersedia jika API Clipboard tidak aktif.
+
+Cara Uji Cepat
+1) Copy Link
+- Buka halaman `Visitors > Pre‑Register`.
+- Pada bagian “Recent Pre‑Registrations”, klik ikon “Copy Registration Link”.
+- Paste hasil ke browser/editor; pastikan URL lengkap tersalin dan muncul toast “Link copied”.
+
+2) Upcoming
+- Buat Pre‑Registration dengan `Expected Arrival Date = hari ini`, belum diverifikasi, dan belum check‑in.
+- Buka `Dashboard` dan cek chip “Upcoming” — angka harus mencerminkan jumlah tersebut.
+
+3) Today
+- Lakukan check‑in untuk Visitor/Contractor/Delivery pada hari ini.
+- Buka `Dashboard` dan pastikan chip “Today” menampilkan total gabungan seluruh kategori (aktif maupun sudah check out).
+
+Catatan Tambahan
+- Jika diinginkan, chip “Upcoming” dapat ditambah filter `expires_at >= now` untuk mengabaikan pre‑registration yang sudah kadaluarsa.
+- Tooltip/penjelasan pada chip “Today” dapat ditambahkan untuk memperjelas definisi perhitungan.
+
+Tanggal Rilis: 08/11/2025
+Versi: Dashboard & Visitors – incremental updates

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Pre-Registration Already Used" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="glassmorphism rounded-2xl p-8 text-center">
+        <div class="mb-8">
+            <svg class="w-16 h-16 text-orange-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h1 class="text-3xl font-bold text-orange-600 mb-2">{% trans "Pre-Registration Already Used" %}</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">
+                {% trans "This pre-registration link has already been used and cannot be used again." %}
+            </p>
+        </div>
+        
+        <div class="glassmorphism rounded-xl p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">{% trans "What to do next:" %}</h2>
+            <div class="text-left space-y-3">
+                <p class="flex items-start">
+                    <span class="text-blue-600 font-bold mr-2">1.</span>
+                    {% trans "If you need to visit again, request a new pre-registration" %}
+                </p>
+                <p class="flex items-start">
+                    <span class="text-blue-600 font-bold mr-2">2.</span>
+                    {% trans "Contact the site administrator if you believe this is an error" %}
+                </p>
+                <p class="flex items-start">
+                    <span class="text-blue-600 font-bold mr-2">3.</span>
+                    {% trans "For immediate access, register as a walk-in visitor at the site" %}
+                </p>
+            </div>
+        </div>
+        
+        <div class="text-sm text-gray-500 dark:text-gray-400">
+            {% trans "Each pre-registration link can only be used once for security purposes." %}
+        </div>
+    </div>
+</div>
+{% endblock %}

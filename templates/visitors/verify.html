@@ -1,0 +1,543 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Verify Visitor" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glassmorphism rounded-2xl p-8">
+        <h1 class="text-3xl font-bold mb-8 text-center">{% trans "Verify Pre-Registered Visitor" %}</h1>
+        
+        <!-- Success/Failure Modal -->
+        <div id="verify-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-lg p-6">
+                <div class="flex flex-col items-center text-center">
+                    <div id="verify-lottie" class="w-40 h-40 mb-4 flex items-center justify-center"></div>
+                    <h3 id="verify-title" class="text-2xl font-semibold mb-2"></h3>
+                    <p id="verify-message" class="text-gray-600 dark:text-gray-300 mb-4"></p>
+                    <div id="verify-details" class="w-full text-left hidden">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Full Name" %}</div>
+                                <div id="v-fullname" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Company" %}</div>
+                                <div id="v-company" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Category" %}</div>
+                                <div id="v-category" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Contact" %}</div>
+                                <div id="v-contact" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Pass Number" %}</div>
+                                <div id="v-pass" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Check-in" %}</div>
+                                <div id="v-checkin" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Host" %}</div>
+                                <div id="v-host" class="font-medium"></div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-500">{% trans "Expected Arrival" %}</div>
+                                <div id="v-expected" class="font-medium"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-2">
+                        <a id="print-pass-btn" href="#" target="_blank" class="hidden px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{% trans "Print Pass" %}</a>
+                        <button type="button" id="close-verify-modal" class="px-5 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">{% trans "Close" %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Verification Method Header (Manual OTP removed) -->
+        <div class="flex mb-8 border-b border-gray-200 dark:border-gray-700">
+            <span class="px-6 py-3 border-b-2 border-blue-500 text-blue-600 font-medium text-sm">
+                {% trans "QR Scanner" %}
+            </span>
+        </div>
+        
+        <!-- Visitor Verification -->
+         <div class="space-y-6">
+             <div class="glassmorphism rounded-xl p-6">
+                 <h2 class="text-xl font-semibold mb-4">{% trans "Visitor Verification" %}</h2>
+                 <p class="text-gray-600 dark:text-gray-300 mb-6">
++                      {% trans "Scan the QR code from the visitor's pre-registration pass to verify." %}
+                   </p>
+                 
+                 <!-- QR Scanner Area -->
+                 <div class="mb-6">
+                     <div id="qr-scanner" class="w-full max-w-md mx-auto bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative">
+                         <video id="qr-video" class="w-full h-64 object-cover" playsinline muted></video>
+                         <div id="qr-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                             <div class="border-2 border-blue-400/70 rounded-md w-3/4 h-3/4"></div>
+                         </div>
+                     </div>
+                     <div class="mt-4 flex flex-col items-center gap-3">
+                         <div class="flex items-center gap-2">
+                             <select id="camera-select" class="hidden px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white/70 dark:bg-gray-800/70 text-sm"></select>
+                             <button type="button" id="torch-toggle" disabled
+                                     class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                 {% trans "Toggle Torch" %}
+                             </button>
+                         </div>
+                         <div class="text-center">
+                             <button type="button" id="start-scanner" onclick="startQRScanner()" 
+                                     class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors mr-2">
+                                 {% trans "Start Camera" %}
+                             </button>
+                             <button type="button" id="stop-scanner" onclick="stopQRScanner()" style="display: none;"
+                                     class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                                 {% trans "Stop Camera" %}
+                             </button>
+                         </div>
+                         <p id="scanner-status" class="text-sm text-gray-600 dark:text-gray-300"></p>
+                     </div>
+                 </div>
+                 
+                 <!-- Unified OTP Display/Input -->
+                 <form method="post" id="scanner-form" class="space-y-4" aria-labelledby="otp-label">
+                     {% csrf_token %}
+                     <input type="hidden" name="verification_type" value="otp">
+                     
+                     <div>
+                         <label id="otp-label" for="otp" class="block text-sm font-medium mb-2">{% trans "OTP" %}</label>
+                         <input type="text" id="otp" name="otp" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code"
+                                placeholder="{% trans 'Scan QR to fill 6-digit OTP' %}"
+                                aria-describedby="otp-hint"
+                                class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-center text-2xl font-mono tracking-widest">
+                         <div id="otp-hint" class="text-sm mt-1 text-gray-500">{% trans "Enter the 6-digit code from the visitor's pass. Only numbers allowed." %}</div>
+                         <div class="mt-2 text-center">
+                             <button type="button" id="copy-otp" disabled
+                                     class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                 {% trans "Copy OTP" %}
+                             </button>
+                         </div>
+                     </div>
+                     
+                     <div class="text-center">
+                         <button type="submit" id="verify-scanned" disabled
+                                 class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                             {% trans "Verify Visitor" %}
+                         </button>
+                     </div>
+                 </form>
+             </div>
+         </div>
+ 
+        <!-- Manual OTP Verification removed intentionally -->
+ 
+         <!-- Instructions -->
+         <div class="glassmorphism rounded-xl p-6 mt-8">
+             <h3 class="text-lg font-semibold mb-4">{% trans "Verification Instructions" %}</h3>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div>
+                     <h4 class="font-medium text-blue-600 mb-2">{% trans "QR Scanner Method (Primary):" %}</h4>
+                     <ul class="text-sm space-y-1 text-gray-600 dark:text-gray-300">
+                         <li>• {% trans "Ask visitor to show QR code from their pass" %}</li>
+                         <li>• {% trans "Click 'Start Camera' to activate scanner" %}</li>
+                         <li>• {% trans "Point camera at QR code to scan 6-digit OTP" %}</li>
+                         <li>• {% trans "Click 'Verify Visitor' to check in" %}</li>
+                     </ul>
+                 </div>
+                 <div>
+                     <h4 class="font-medium text-green-600 mb-2">{% trans "QR Required:" %}</h4>
+                     <ul class="text-sm space-y-1 text-gray-600 dark:text-gray-300">
+                         <li>• {% trans "If the camera is unavailable, use a device with a working camera to scan the QR" %}</li>
+                         <li>• {% trans "You can also paste a known 6-digit OTP into the field if obtained from the QR payload" %}</li>
+                         <li>• {% trans "Manual entry section has been removed for security and accuracy" %}</li>
+                     </ul>
+                 </div>
+             </div>
+         </div>
+     </div>
+ </div>
+
+<script>
+let video = null;
+let rafId = null;
+let canvas = null;
+let context = null;
+let currentStream = null;
+let currentTrack = null;
+let torchSupported = false;
+let selectedDeviceId = null;
+
+function setStatus(msg) {
+    const el = document.getElementById('scanner-status');
+    if (el) el.textContent = msg || '';
+}
+
+async function loadJsQR() {
+    if (window.jsQR) return;
+    const load = (src) => new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.async = true;
+        s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+    });
+    try {
+        await load('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js');
+    } catch (e) {
+        // Fallback CDN
+        await load('https://unpkg.com/jsqr@1.4.0/dist/jsQR.js');
+    }
+}
+
+async function populateCameras() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(d => d.kind === 'videoinput');
+        const select = document.getElementById('camera-select');
+        if (!select) return;
+        select.innerHTML = '';
+        cameras.forEach((cam, idx) => {
+            const opt = document.createElement('option');
+            opt.value = cam.deviceId;
+            opt.textContent = cam.label || (`Camera ${idx + 1}`);
+            select.appendChild(opt);
+        });
+        if (cameras.length > 1) {
+            select.classList.remove('hidden');
+        } else {
+            select.classList.add('hidden');
+        }
+        if (selectedDeviceId && cameras.some(c => c.deviceId === selectedDeviceId)) {
+            select.value = selectedDeviceId;
+        } else if (cameras[0]) {
+            selectedDeviceId = cameras[0].deviceId;
+            select.value = selectedDeviceId;
+        }
+    } catch (e) {
+        console.warn('enumerateDevices failed:', e);
+    }
+}
+
+async function startQRScanner() {
+    video = document.getElementById('qr-video');
+    const startBtn = document.getElementById('start-scanner');
+    const stopBtn = document.getElementById('stop-scanner');
+    const torchBtn = document.getElementById('torch-toggle');
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera not supported in this browser. QR scanning is required.');
+        return;
+    }
+
+    // Ensure QR library is available before starting
+    try { await loadJsQR(); } catch (e) { alert('QR library failed to load.'); return; }
+
+    // Stop any existing stream/loop
+    stopQRScanner();
+
+    // Build constraints
+    const constraints = { video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: 'environment' }, audio: false };
+
+    try {
+        setStatus('Requesting camera...');
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        currentStream = stream;
+        currentTrack = stream.getVideoTracks()[0];
+        video.srcObject = stream;
+        video.setAttribute('playsinline', true);
+        video.muted = true;
+        await video.play();
+
+        // After permission granted, populate camera list (labels now available)
+        await populateCameras();
+
+        // Torch capability
+        torchSupported = false;
+        try {
+            const caps = currentTrack.getCapabilities?.();
+            torchSupported = !!(caps && caps.torch);
+        } catch (_) {}
+        torchBtn.disabled = !torchSupported;
+
+        // Prepare canvas once
+        if (!canvas) {
+            canvas = document.createElement('canvas');
+            context = canvas.getContext('2d', { willReadFrequently: true });
+        }
+
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+        setStatus('Camera started. Aim at the QR code.');
+
+        // Start decoding loop
+        const scan = () => {
+            if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+                rafId = requestAnimationFrame(scan);
+                return;
+            }
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            try {
+                const code = window.jsQR ? jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' }) : null;
+                if (code && code.data) {
+                    const payload = String(code.data);
+                    const match = payload.match(/\b(\d{6})\b/);
+                    let otp = match?.[1] || payload.replace(/\D/g, '').slice(0, 6);
+                    if (/^\d{6}$/.test(otp)) {
+                        handleQRDetection(otp);
+                        return; // handleQRDetection will stop the scanner
+                    }
+                }
+            } catch (e) {
+                console.error('QR decode error:', e);
+            }
+            rafId = requestAnimationFrame(scan);
+        };
+        rafId = requestAnimationFrame(scan);
+
+    } catch (err) {
+        console.error('Error accessing camera:', err);
+        alert('Could not access camera. QR scanning is required.');
+        setStatus('');
+    }
+}
+
+function stopQRScanner() {
+    const startBtn = document.getElementById('start-scanner');
+    const stopBtn = document.getElementById('stop-scanner');
+    const torchBtn = document.getElementById('torch-toggle');
+
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+        currentStream = null;
+    }
+    if (video) { video.srcObject = null; }
+
+    startBtn && (startBtn.style.display = 'inline-block');
+    stopBtn && (stopBtn.style.display = 'none');
+    torchBtn && (torchBtn.disabled = true);
+    setStatus('');
+}
+
+async function toggleTorch() {
+    if (!currentTrack) return;
+    try {
+        torchSupported = !!(currentTrack.getCapabilities?.().torch);
+        if (!torchSupported) return;
+        // Toggle torch
+        const settings = currentTrack.getSettings?.() || {};
+        const newTorch = !settings.torch;
+        await currentTrack.applyConstraints({ advanced: [{ torch: newTorch }] });
+        const btn = document.getElementById('torch-toggle');
+        if (btn) btn.textContent = newTorch ? '{% trans "Torch ON" %}' : '{% trans "Toggle Torch" %}';
+    } catch (e) {
+        console.warn('Torch toggle failed:', e);
+    }
+}
+
+// Detection handler: fill the single OTP input and enable actions
+window.handleQRDetection = function(otpCode) {
+    const otpInput = document.getElementById('otp');
+    if (otpInput) {
+        otpInput.value = otpCode;
+        otpInput.dispatchEvent(new Event('input'));
+    }
+    // Stop scanner to prevent multiple detections while submitting
+    try { stopQRScanner(); } catch (_) {}
+    // Auto-submit for QR-based verification (manual typing still uses the button)
+    const form = document.getElementById('scanner-form');
+    if (form) {
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+    }
+};
+ 
+// Lottie loader
+async function ensureLottie() {
+    if (window.lottie) return;
+    await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/dist/lottie.min.js';
+        s.async = true; s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+    });
+}
+
+// Simple SVG fallback icon renderer for success/failure
+function renderStatusIcon(container, success) {
+    if (!container) return;
+    const svgSuccess = `
+      <svg class="w-32 h-32 md:w-36 md:h-36 text-green-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" stroke-width="2" class="opacity-30" />
+        <path d="M9 12l2 2 4-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    const svgFail = `
+      <svg class="w-32 h-32 md:w-36 md:h-36 text-red-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" stroke-width="2" class="opacity-30" />
+        <path d="M15 9l-6 6M9 9l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    container.innerHTML = success ? svgSuccess : svgFail;
+}
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+function showVerifyModal(opts) {
+    const modal = document.getElementById('verify-modal');
+    const lottieBox = document.getElementById('verify-lottie');
+    const title = document.getElementById('verify-title');
+    const msg = document.getElementById('verify-message');
+    const details = document.getElementById('verify-details');
+    const printBtn = document.getElementById('print-pass-btn');
+
+    // Reset
+    lottieBox.innerHTML = '';
+    details.classList.add('hidden');
+    printBtn.classList.add('hidden');
+
+    title.textContent = opts.success ? '{% trans "Verification Successful" %}' : '{% trans "Verification Failed" %}';
+    msg.textContent = opts.message || '';
+
+    // Fallback icon immediately (will be replaced by animation if Lottie loads)
+    renderStatusIcon(lottieBox, !!opts.success);
+
+    // Fill details if visitor present
+    if (opts.visitor) {
+        details.classList.remove('hidden');
+        document.getElementById('v-fullname').textContent = opts.visitor.full_name || '';
+        document.getElementById('v-company').textContent = opts.visitor.company || '';
+        document.getElementById('v-category').textContent = opts.visitor.category || '';
+        document.getElementById('v-contact').textContent = opts.visitor.contact_number || '';
+        document.getElementById('v-pass').textContent = opts.visitor.pass_number || '';
+        document.getElementById('v-checkin').textContent = opts.visitor.check_in_time || '';
+        // New fields
+        const hostEl = document.getElementById('v-host');
+        const expEl = document.getElementById('v-expected');
+        if (hostEl) hostEl.textContent = opts.visitor.host || '';
+        if (expEl) expEl.textContent = opts.visitor.expected_arrival || '';
+         if (opts.print_url) {
+             printBtn.href = opts.print_url;
+             printBtn.classList.remove('hidden');
+         }
+     }
+ 
+     // Play Lottie (replace fallback if available)
+     ensureLottie().then(() => {
+         if (!window.lottie) return;
+         lottieBox.innerHTML = '';
+         window.lottie.loadAnimation({
+             container: lottieBox,
+             renderer: 'svg', loop: false, autoplay: true,
+             path: opts.success
+                 ? 'https://assets9.lottiefiles.com/packages/lf20_jbrw3hcz.json'
+                 : 'https://assets10.lottiefiles.com/packages/lf20_qp1q7mct.json'
+         });
+     }).catch(() => {});
+
+     modal.classList.remove('hidden');
+     modal.classList.add('flex');
+}
+
+function hideVerifyModal() {
+    const modal = document.getElementById('verify-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const torchBtn = document.getElementById('torch-toggle');
+    if (torchBtn) torchBtn.addEventListener('click', toggleTorch);
+
+    const select = document.getElementById('camera-select');
+    if (select) {
+        select.addEventListener('change', async (e) => {
+            selectedDeviceId = e.target.value || null;
+            await startQRScanner();
+        });
+    }
+
+    // Unified OTP input + copy/verify state management
+    const copyBtn = document.getElementById('copy-otp');
+    const otpInput = document.getElementById('otp');
+    const verifyBtn = document.getElementById('verify-scanned');
+    function updateActions() {
+        if (!otpInput) return;
+        otpInput.value = otpInput.value.replace(/[^0-9]/g, '').slice(0,6);
+        const valid = /^\d{6}$/.test(otpInput.value);
+        if (copyBtn) copyBtn.disabled = !valid;
+        if (verifyBtn) verifyBtn.disabled = !valid;
+        // light feedback
+        otpInput.style.backgroundColor = valid ? '#dcfce7' : '';
+    }
+    if (otpInput) otpInput.addEventListener('input', updateActions);
+    updateActions();
+
+    if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+            const val = (otpInput || {}).value || '';
+            if (!val) return;
+            try {
+                await navigator.clipboard.writeText(val);
+                copyBtn.textContent = '{% trans "Copied!" %}';
+                setTimeout(() => copyBtn.textContent = '{% trans "Copy OTP" %}', 1200);
+            } catch (_) {}
+        });
+    }
+
+    // Modal close
+    const closeBtn = document.getElementById('close-verify-modal');
+    if (closeBtn) closeBtn.addEventListener('click', hideVerifyModal);
+ 
+     // AJAX submit helper
+    async function ajaxSubmit(form) {
+        const submitBtn = form.querySelector('button[type="submit"], #verify-scanned');
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '{% trans "Verifying..." %}'; }
+        try {
+            const fd = new FormData(form);
+            fd.append('ajax', '1');
+            const res = await fetch(form.action || window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || fd.get('csrfmiddlewaretoken') || ''
+                },
+                body: fd
+            });
+            const data = await res.json().catch(() => null);
+            if (!data) throw new Error('Invalid server response');
+            if (data.status === 'success') {
+                showVerifyModal({ success: true, message: data.message, visitor: data.visitor, print_url: data.print_url });
+            } else {
+                const reason = data.message || '{% trans "Visitor not registered." %}';
+                showVerifyModal({ success: false, message: reason });
+            }
+        } catch (e) {
+            showVerifyModal({ success: false, message: '{% trans "Server error. Please try again." %}' });
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
+        }
+    }
+
+    // Hook scanner form
+    const scannerForm = document.getElementById('scanner-form');
+    if (scannerForm) {
+        scannerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            ajaxSubmit(scannerForm);
+        });
+    }
+
+    // Manual OTP form has been removed
+});
+</script>
+{% endblock %}

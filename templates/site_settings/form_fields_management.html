@@ -1,0 +1,577 @@
+{% extends 'base.html' %}
+
+{% block title %}Form Field Management - VMS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Form Field Management</h1>
+            <p class="text-gray-600 dark:text-gray-400">Configure visitor registration form fields and system settings</p>
+        </div>
+        <a href="{% url 'site_settings:settings_dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Back to Settings
+        </a>
+    </div>
+
+    {% if not sites %}
+        <div class="glassmorphism-card text-center py-12">
+            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No Sites Available</h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">You need to create at least one site before configuring form fields.</p>
+            <a href="{% url 'site_settings:site_add' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Create First Site
+            </a>
+        </div>
+    {% else %}
+        <form method="post" action="{% url 'site_settings:update_form_fields' %}" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- System Settings -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">System Features</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="enable_pre_registration" id="enable_pre_registration" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               {% if config.enable_pre_registration %}checked{% endif %}>
+                        <label for="enable_pre_registration" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Enable Pre-Registration
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="enable_qr_code" id="enable_qr_code" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               {% if config.enable_qr_code %}checked{% endif %}>
+                        <label for="enable_qr_code" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Enable QR Code
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="enable_otp" id="enable_otp" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               {% if config.enable_otp %}checked{% endif %}>
+                        <label for="enable_otp" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Enable OTP Verification
+                        </label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="enable_printer" id="enable_printer" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               {% if config.enable_printer %}checked{% endif %}>
+                        <label for="enable_printer" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                            Enable Printer
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Fields Configuration -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Visitor Form Fields</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">Configure which fields are visible and required in the visitor registration form.</p>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Field Name</th>
+                                <th class="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Visible</th>
+                                <th class="text-center py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Required</th>
+                                <th class="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            {% with field_configs=config.visitor_fields_config %}
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Last 4 Digit IC No.</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="ic_last_digits_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.ic_last_digits.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="ic_last_digits_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.ic_last_digits.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Last 4 digits of IC number (alphanumeric)</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Full Name</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="full_name_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.full_name.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="full_name_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.full_name.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Visitor's full name</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Contact Number</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="contact_number_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.contact_number.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="contact_number_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.contact_number.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Contact phone number</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Pass Number</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="pass_number_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.pass_number.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="pass_number_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.pass_number.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Visitor pass number</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Company</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="company_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.company.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="company_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.company.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Company or organization</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Vehicle Number</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="vehicle_number_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.vehicle_number.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="vehicle_number_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.vehicle_number.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Vehicle registration number</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Category</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="category_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.category.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="category_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.category.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Visitor category (Visitor, Contractor, Delivery)</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Address</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="address_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.address.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="address_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.address.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Visitor's address</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Tower</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="tower_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.tower.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="tower_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.tower.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Building tower</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Level</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="level_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.level.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="level_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.level.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Floor level</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Unit</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="unit_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.unit.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="unit_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.unit.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Unit number</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">Purpose</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="purpose_visible" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.purpose.visible %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <input type="checkbox" name="purpose_required" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" {% if field_configs.purpose.required %}checked{% endif %}>
+                                    </td>
+                                    <td class="py-3 px-4 text-gray-600 dark:text-gray-400">Purpose of visit</td>
+                                </tr>
+                            {% endwith %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Category Management -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Category Management</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">Manage visitor categories like Visitor, Contractor, Delivery, etc.</p>
+                
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Current Categories</h3>
+                        <a href="{% url 'site_settings:category_add' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Add Category
+                        </a>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for category in categories %}
+                        <div class="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 dark:text-white">{{ category.name }}</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">{{ category.description|default:"No description" }}</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'site_settings:category_edit' category.id %}" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                    </a>
+                                    <a href="{% url 'site_settings:category_delete' category.id %}" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-span-full text-center py-8">
+                            <p class="text-gray-500 dark:text-gray-400">No categories found. Add your first category to get started.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Address / Area of Visit Configuration -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Address / Area of Visit</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">Choose between address fields (Tower/Level/Unit) or Area of Visit dropdown for visitor location.</p>
+                
+                <!-- Mode Toggle -->
+                <div class="flex items-center space-x-6 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Location Mode:</span>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="address_mode" value="address_fields" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                               {% if not address_config or address_config.address_mode == 'address_fields' %}checked{% endif %}
+                               onchange="switchAddressMode('address_fields')">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Address Fields</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" name="address_mode" value="area_of_visit" 
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                               {% if address_config and address_config.address_mode == 'area_of_visit' %}checked{% endif %}
+                               onchange="switchAddressMode('area_of_visit')">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Area of Visit</span>
+                    </label>
+                </div>
+
+                <!-- Tabs -->
+                <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
+                    <nav class="flex space-x-8" id="address-tabs">
+                        <button type="button" id="tab-address-fields" onclick="showAddressTab('address_fields')"
+                                class="py-2 px-1 border-b-2 font-medium text-sm transition-colors
+                                       {% if not address_config or address_config.address_mode == 'address_fields' %}
+                                       border-blue-500 text-blue-600
+                                       {% else %}
+                                       border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
+                                       {% endif %}">
+                            Address Field Options
+                        </button>
+                        <button type="button" id="tab-area-of-visit" onclick="showAddressTab('area_of_visit')"
+                                class="py-2 px-1 border-b-2 font-medium text-sm transition-colors
+                                       {% if address_config and address_config.address_mode == 'area_of_visit' %}
+                                       border-blue-500 text-blue-600
+                                       {% else %}
+                                       border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
+                                       {% endif %}">
+                            Area of Visit
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content: Address Field Options -->
+                <div id="panel-address-fields" class="tab-panel {% if not address_config or address_config.address_mode == 'address_fields' %}{% else %}hidden{% endif %}">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Tower Options -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Tower Options</h3>
+                            <div class="space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" id="new_tower" placeholder="Add new tower" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <button type="button" onclick="addOption('tower')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="tower_options" class="space-y-1 max-h-40 overflow-y-auto">
+                                    {% if address_config.tower_options %}
+                                        {% for tower in address_config.tower_options %}
+                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
+                                            <span class="text-sm">{{ tower }}</span>
+                                            <button type="button" onclick="removeOption('tower', '{{ tower }}')" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">No tower options configured</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Level Options -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Level Options</h3>
+                            <div class="space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" id="new_level" placeholder="Add new level" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <button type="button" onclick="addOption('level')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="level_options" class="space-y-1 max-h-40 overflow-y-auto">
+                                    {% if address_config.level_options %}
+                                        {% for level in address_config.level_options %}
+                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
+                                            <span class="text-sm">{{ level }}</span>
+                                            <button type="button" onclick="removeOption('level', '{{ level }}')" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">No level options configured</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Unit Options -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Unit Options</h3>
+                            <div class="space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    <input type="text" id="new_unit" placeholder="Add new unit" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <button type="button" onclick="addOption('unit')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="unit_options" class="space-y-1 max-h-40 overflow-y-auto">
+                                    {% if address_config.unit_options %}
+                                        {% for unit in address_config.unit_options %}
+                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
+                                            <span class="text-sm">{{ unit }}</span>
+                                            <button type="button" onclick="removeOption('unit', '{{ unit }}')" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">No unit options configured</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Area of Visit -->
+                <div id="panel-area-of-visit" class="tab-panel {% if address_config and address_config.address_mode == 'area_of_visit' %}{% else %}hidden{% endif %}">
+                    <div class="max-w-2xl">
+                        <div class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="text" id="new_area_of_visit" placeholder="Add new area (e.g. Hall A, Dining Hall)" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <button type="button" onclick="addOption('area_of_visit')" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="area_of_visit_options" class="space-y-1 max-h-60 overflow-y-auto">
+                                {% if address_config.area_of_visit_options %}
+                                    {% for area in address_config.area_of_visit_options %}
+                                    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
+                                        <span class="text-sm">{{ area }}</span>
+                                        <button type="button" onclick="removeOption('area_of_visit', '{{ area }}')" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">No area of visit options configured. Add areas like "Hall A", "Dining Hall", etc.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <div class="flex justify-end space-x-4">
+                <a href="{% url 'site_settings:settings_dashboard' %}" class="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Save Configuration
+                </button>
+            </div>
+        </form>
+    {% endif %}
+</div>
+
+<script>
+// Auto-submit form when site selection changes
+if (document.getElementById('site_id')) {
+    document.getElementById('site_id').addEventListener('change', function() {
+        window.location.href = '{% url "site_settings:form_fields_management" %}?site_id=' + this.value;
+    });
+}
+
+// Tab switching for Address / Area of Visit
+function showAddressTab(mode) {
+    // Update tab styles
+    document.getElementById('tab-address-fields').className = 'py-2 px-1 border-b-2 font-medium text-sm transition-colors ' +
+        (mode === 'address_fields' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    document.getElementById('tab-area-of-visit').className = 'py-2 px-1 border-b-2 font-medium text-sm transition-colors ' +
+        (mode === 'area_of_visit' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+    
+    // Update panels
+    document.getElementById('panel-address-fields').classList.toggle('hidden', mode !== 'address_fields');
+    document.getElementById('panel-area-of-visit').classList.toggle('hidden', mode !== 'area_of_visit');
+}
+
+// Switch address mode via AJAX
+function switchAddressMode(mode) {
+    fetch('{% url "site_settings:update_address_options" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            action: 'set_mode',
+            mode: mode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAddressTab(mode);
+        } else {
+            alert(data.error || 'Error switching mode');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error switching mode');
+    });
+}
+
+// Address field options management
+function addOption(fieldType) {
+    const input = document.getElementById(`new_${fieldType}`);
+    const value = input.value.trim();
+    
+    if (!value) {
+        alert('Please enter a value');
+        return;
+    }
+    
+    // Send AJAX request to add option
+    fetch('{% url "site_settings:update_address_options" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            action: 'add',
+            field_type: fieldType,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Error adding option');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding option');
+    });
+}
+
+function removeOption(fieldType, value) {
+    if (!confirm(`Are you sure you want to remove "${value}"?`)) {
+        return;
+    }
+    
+    // Send AJAX request to remove option
+    fetch('{% url "site_settings:update_address_options" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            action: 'remove',
+            field_type: fieldType,
+            value: value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Error removing option');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error removing option');
+    });
+}
+</script>
+{% endblock %}

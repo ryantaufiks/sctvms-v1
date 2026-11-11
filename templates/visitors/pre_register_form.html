@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Visitor Pre Registration" %} - {{ pre_registration.registered_by.profile.site.name|default:"VMS" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="glassmorphism rounded-2xl p-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold mb-2">{% trans "Visitor Pre Registration" %}</h1>
+            <h2 class="text-xl text-gray-600 dark:text-gray-300">{{ pre_registration.registered_by.profile.site.name|default:"VMS" }}</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">{% trans "Please complete your visitor information below" %}</p>
+        </div>
+        
+        <!-- Pre-Registration Information -->
+        <div class="glassmorphism rounded-xl p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4">{% trans "Pre-Registration Details" %}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Invited by:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ pre_registration.registered_by.get_full_name|default:pre_registration.registered_by.username }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Full Name:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ visitor.full_name }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Contact Number:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ visitor.contact_number }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Company:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ visitor.company|default:"-" }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Category:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ visitor.category.name }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Purpose:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ visitor.purpose|default:"-" }}</span>
+                </div>
+                {% if pre_registration.expected_arrival_date %}
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Expected Arrival:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ pre_registration.expected_arrival_date|date:"F d, Y" }}</span>
+                </div>
+                {% endif %}
+                <div class="flex justify-between">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{% trans "Registration Date:" %}</span>
+                    <span class="text-gray-900 dark:text-gray-100">{{ pre_registration.created_at|date:"F d, Y H:i" }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Visitor Information Form -->
+        <div class="glassmorphism rounded-xl p-6">
+            <h3 class="text-lg font-semibold mb-4">{% trans "Complete Your Information" %}</h3>
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="ic_last_digits" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "IC Last 4 Digits" %} *</label>
+                        <input type="text" id="ic_last_digits" name="ic_last_digits" maxlength="4" required
+                               class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="{% trans 'Enter last 4 digits of IC' %}">
+                    </div>
+                    
+                    <div>
+                        <label for="vehicle_number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{% trans "Vehicle Number" %}</label>
+                        <input type="text" id="vehicle_number" name="vehicle_number"
+                               class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="{% trans 'Enter vehicle number (optional)' %}">
+                    </div>
+                </div>
+                
+                {% if visitor.tower or visitor.level or visitor.unit %}
+                <div class="glassmorphism rounded-lg p-4 mt-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{% trans "Destination (Set by Host)" %}</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        {% if visitor.tower %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">{% trans "Tower:" %}</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ visitor.tower }}</span>
+                        </div>
+                        {% endif %}
+                        {% if visitor.level %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">{% trans "Level:" %}</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ visitor.level }}</span>
+                        </div>
+                        {% endif %}
+                        {% if visitor.unit %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-600 dark:text-gray-400">{% trans "Unit:" %}</span>
+                            <span class="text-gray-900 dark:text-gray-100">{{ visitor.unit }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="flex justify-end space-x-4 mt-8">
+                    <button type="submit" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        {% trans "Complete Registration" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="glassmorphism rounded-xl p-6 mt-6">
+            <h3 class="text-lg font-semibold mb-4">{% trans "Instructions" %}</h3>
+            <div class="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                 <p class="flex items-start">
+                     <span class="text-blue-600 font-bold mr-2">1.</span>
+                     {% trans "Please fill in the required information accurately" %}
+                 </p>
+                 <p class="flex items-start">
+                     <span class="text-blue-600 font-bold mr-2">2.</span>
+                     {% trans "IC Last 4 Digits are required for security verification" %}
+                 </p>
+                 <p class="flex items-start">
+                     <span class="text-blue-600 font-bold mr-2">3.</span>
+                     {% trans "This form expires 2 hours after creation if not completed" %}
+                 </p>
+                 <p class="flex items-start">
+                     <span class="text-blue-600 font-bold mr-2">4.</span>
+                     {% trans "QR code and OTP can be used starting from 1 hour before Expected Arrival date & time, and also will work by late 3 hours after Expected Arrival date & time" %}
+                 </p>
+                 <p class="flex items-start">
+                     <span class="text-blue-600 font-bold mr-2">5.</span>
+                     {% trans "Present the QR code or OTP to security upon arrival" %}
+                 </p>
+             </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

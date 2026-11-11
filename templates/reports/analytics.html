@@ -1,0 +1,802 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Analytics Report" %}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+  #site-map { height: 360px; border-radius: 8px; }
+  .leaflet-container { font-family: inherit; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="glassmorphism rounded-xl p-6 overflow-visible relative">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div class="flex-1">
+                <h1 class="text-xl font-semibold">{% trans "Analytics Report" %}</h1>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                    <span id="analytics-description">
+                        {% if analytics_type == 'vehicle' %}
+                            {% trans "Comprehensive vehicle analytics and insights" %}
+                        {% else %}
+                            {% trans "Comprehensive visitor analytics and insights" %}
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+            
+            <div class="flex space-x-4">
+                <button onclick="exportData('csv')" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export CSV
+                </button>
+                <button onclick="exportData('excel')" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export Excel
+                </button>
+                <button onclick="exportData('pdf')" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Export PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Type Toggle -->
+    <div class="glassmorphism rounded-xl p-4">
+        <div class="flex items-center justify-center">
+            <div class="flex items-center space-x-3">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "Analytics Type" %}:</label>
+                <div class="relative">
+                    <select id="analytics-type-select" onchange="switchAnalyticsType()" 
+                            class="appearance-none bg-white/50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 pr-8 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="visitor" {% if analytics_type != 'vehicle' %}selected{% endif %}>
+                            {% trans "Visitor Analytics" %}
+                        </option>
+                        <option value="vehicle" {% if analytics_type == 'vehicle' %}selected{% endif %}>
+                            {% trans "Vehicle Analytics" %}
+                        </option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Preview -->
+    <div class="glassmorphism rounded-xl p-6 mt-2 relative z-0">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <h3 class="text-xl font-semibold">{% trans "Location Preview" %}</h3>
+            {% if primary_site %}
+                <span class="text-sm text-gray-600 dark:text-gray-400">{{ primary_site.name }}{% if primary_site.postal_code %} • {% trans "Postal" %}: {{ primary_site.postal_code }}{% endif %}</span>
+            {% else %}
+                <span class="text-sm text-gray-600 dark:text-gray-400">{% trans "No site available" %}</span>
+            {% endif %}
+        </div>
+        {% if primary_site and primary_site.postal_code %}
+            <div id="site-map" aria-label="Site location map" class="rounded-lg"></div>
+            <div id="map-status" class="text-sm text-gray-600 dark:text-gray-400 mt-2"></div>
+        {% else %}
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div class="flex">
+                    <svg class="w-5 h-5 text-yellow-400 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div>
+                        <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">{% trans "Map Unavailable" %}</h4>
+                        <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                            {% if not primary_site %}
+                                {% trans "No active site found. Please create or activate a site first." %}
+                            {% else %}
+                                {% trans "Postal code not set for" %} {{ primary_site.name }}. {% trans "Update it in Settings → Site Configuration to see the map." %}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="glassmorphism rounded-xl p-6">
+        <form method="get" class="flex items-end space-x-4">
+            <div>
+                <label for="date_from" class="block text-sm font-medium mb-2">{% trans "From Date" %}</label>
+                <input type="date" id="date_from" name="date_from" value="{{ date_from|date:'Y-m-d' }}" 
+                       class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+            <div>
+                <label for="date_to" class="block text-sm font-medium mb-2">{% trans "To Date" %}</label>
+                <input type="date" id="date_to" name="date_to" value="{{ date_to|date:'Y-m-d' }}" 
+                       class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                {% trans "Apply Filter" %}
+            </button>
+        </form>
+    </div>
+
+    <!-- Visitor Analytics Section -->
+    {% if analytics_type != 'vehicle' %}
+    <div id="visitor-analytics" class="analytics-section space-y-6">
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Total Visitors -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Total Visitors" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ analytics.total_visitors }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Visitors -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Active Visitors" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ analytics.active_visitors }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checked Out -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-orange-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Checked Out" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ analytics.checked_out_visitors }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Average Visit Duration -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-purple-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Avg Duration" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ analytics.avg_duration_hours }}h</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visitor Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Daily Visitors Chart -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Daily Visitors Trend" %}</h3>
+                <div class="h-80">
+                    <canvas id="dailyVisitorsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Visitors by Category -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Visitors by Category" %}</h3>
+                <div class="h-80">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visitor Detailed Statistics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Category Breakdown -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Category Breakdown" %}</h3>
+                <div class="space-y-4">
+                    {% for category in analytics.visitors_by_category %}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-blue-500 mr-3"></div>
+                            <span class="font-medium">{{ category.category__name|default:"Uncategorized" }}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-600 dark:text-gray-400">{{ category.count }}</span>
+                            <div class="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div class="bg-blue-500 h-2 rounded-full" style="width: {% widthratio category.count analytics.total_visitors 100 %}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 dark:text-gray-400">{% trans "No data available" %}</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Additional Insights -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Visit Insights" %}</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                            <span class="text-sm font-medium">{% trans "Total Check-ins" %}</span>
+                        </div>
+                        <span class="text-lg font-bold">{{ analytics.total_visitors }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-blue-500 mr-3"></div>
+                            <span class="text-sm font-medium">{% trans "Completion Rate" %}</span>
+                        </div>
+                        <span class="text-lg font-bold">{% if analytics.total_visitors > 0 %}{% widthratio analytics.checked_out_visitors analytics.total_visitors 100 %}%{% else %}0%{% endif %}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-purple-500 mr-3"></div>
+                            <span class="text-sm font-medium">{% trans "Currently Active" %}</span>
+                        </div>
+                        <span class="text-lg font-bold">{{ analytics.active_visitors }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Peak Hours Analysis -->
+        <div class="glassmorphism rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-4">{% trans "Peak Hours Analysis" %}</h3>
+            <div class="h-80">
+                <canvas id="peakHoursChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Vehicle Analytics Section -->
+    {% if analytics_type == 'vehicle' %}
+    <div id="vehicle-analytics" class="analytics-section space-y-6">
+        <!-- Vehicle Key Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Total Vehicles -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-indigo-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Total Vehicles" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ vehicle_analytics.total_vehicles }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Vehicles -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Active Vehicles" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ vehicle_analytics.active_vehicles }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Synced Vehicles -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Synced Vehicles" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ vehicle_analytics.synced_vehicles }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sync Success Rate -->
+            <div class="glassmorphism rounded-xl p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-purple-500 bg-opacity-20 mr-4">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{% trans "Sync Success Rate" %}</p>
+                        <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ vehicle_analytics.sync_success_rate }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Registration Trend Chart -->
+        <div class="glassmorphism rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-4">{% trans "7-Day Vehicle Registration Trend" %}</h3>
+            <div class="h-80">
+                <canvas id="vehicleTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Vehicle Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Vehicle Status Distribution -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Vehicle Status Distribution" %}</h3>
+                <div class="h-80">
+                    <canvas id="vehicleStatusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Vehicle Sync Performance -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Sync Performance" %}</h3>
+                <div class="h-80">
+                    <canvas id="vehicleSyncChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Detailed Statistics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Vehicle Type Breakdown -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Vehicle Type Breakdown" %}</h3>
+                <div class="space-y-4">
+                    {% for vehicle_type in vehicle_analytics.vehicles_by_type %}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 rounded-full bg-indigo-500 mr-3"></div>
+                            <span class="font-medium">{{ vehicle_type.type|default:"Unknown" }}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-gray-600 dark:text-gray-400">{{ vehicle_type.count }}</span>
+                            <div class="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div class="bg-indigo-500 h-2 rounded-full" style="width: {% widthratio vehicle_type.count vehicle_analytics.total_vehicles 100 %}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 dark:text-gray-400">{% trans "No data available" %}</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Vehicle Insights -->
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-xl font-semibold mb-4">{% trans "Vehicle Insights" %}</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                            <span class="text-sm font-medium">{% trans "Total Registrations" %}</span>
+                        </div>
+                        <span class="text-lg font-bold">{{ vehicle_analytics.total_vehicles }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-blue-500 mr-3"></div>
+                            <span class="text-sm font-medium">{% trans "Sync Success Rate" %}</span>
+                        </div>
+                        <span class="text-lg font-bold">{{ vehicle_analytics.sync_success_rate }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-purple-500 mr-3"></div>
+                            <span class="text-sm font-medium">{% trans "Currently Active" %}</span>
+                        </div>
+                        <span class="text-lg font-bold">{{ vehicle_analytics.active_vehicles }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Peak Analysis -->
+        <div class="glassmorphism rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-4">{% trans "Peak Registration Hours" %}</h3>
+            <div class="h-80">
+                <canvas id="vehiclePeakHoursChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+
+</div>
+
+<!-- Safer JSON embedding for charts -->
+{{ analytics.daily_visitors|json_script:"daily-data" }}
+{{ analytics.visitors_by_category|json_script:"category-data" }}
+{{ analytics.peak_hours|json_script:"peak-hours-data" }}
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Chart configurations
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            labels: {
+                color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151'
+            }
+        }
+    },
+    scales: {
+        x: {
+            ticks: {
+                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'
+            },
+            grid: {
+                color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+            }
+        },
+        y: {
+            ticks: {
+                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'
+            },
+            grid: {
+                color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+            }
+        }
+    }
+};
+
+// Daily Visitors Chart
+const dailyData = JSON.parse(document.getElementById('daily-data').textContent);
+const dailyCtx = document.getElementById('dailyVisitorsChart').getContext('2d');
+new Chart(dailyCtx, {
+    type: 'line',
+    data: {
+        labels: dailyData.map(d => d.date),
+        datasets: [{
+            label: 'Daily Visitors',
+            data: dailyData.map(d => d.count),
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: chartOptions
+});
+
+// Category Chart
+const categoryData = JSON.parse(document.getElementById('category-data').textContent);
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'doughnut',
+    data: {
+        labels: categoryData.map(c => c.category__name || 'Uncategorized'),
+        datasets: [{
+            data: categoryData.map(c => c.count),
+            backgroundColor: [
+                '#3b82f6',
+                '#10b981',
+                '#f59e0b',
+                '#ef4444',
+                '#8b5cf6',
+                '#06b6d4',
+                '#84cc16',
+                '#f97316'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151'
+                }
+            }
+        }
+    }
+});
+
+// Peak Hours Chart
+const peakHoursData = JSON.parse(document.getElementById('peak-hours-data').textContent);
+const peakHoursCtx = document.getElementById('peakHoursChart').getContext('2d');
+const hourLabels = [];
+const hourData = [];
+
+for (let hour = 0; hour < 24; hour++) {
+    const label = hour === 0 ? '12AM' : 
+                  hour < 12 ? `${hour}AM` : 
+                  hour === 12 ? '12PM' : 
+                  `${hour - 12}PM`;
+    hourLabels.push(label);
+    hourData.push(peakHoursData[hour] || 0);
+}
+
+new Chart(peakHoursCtx, {
+    type: 'bar',
+    data: {
+        labels: hourLabels,
+        datasets: [{
+            label: 'Visitors per Hour',
+            data: hourData,
+            backgroundColor: 'rgba(139, 92, 246, 0.8)',
+            borderColor: '#8b5cf6',
+            borderWidth: 1
+        }]
+    },
+    options: chartOptions
+});
+
+// Vehicle Trend Chart
+{% if vehicle_analytics.vehicle_trend %}
+const vehicleTrendData = {{ vehicle_analytics.vehicle_trend|safe }};
+const vehicleTrendCtx = document.getElementById('vehicleTrendChart').getContext('2d');
+new Chart(vehicleTrendCtx, {
+    type: 'line',
+    data: {
+        labels: vehicleTrendData.map(d => d.date),
+        datasets: [{
+            label: 'Vehicle Registrations',
+            data: vehicleTrendData.map(d => d.count),
+            borderColor: '#059669',
+            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#059669',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: {
+                    color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151'
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280'
+                },
+                grid: {
+                    color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+                }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
+                    stepSize: 1
+                },
+                grid: {
+                    color: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+// Export functions
+function exportData(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', format);
+    window.open(`${window.location.pathname}?${params.toString()}`, '_blank');
+}
+
+// Analytics Type Toggle Functionality
+function switchAnalyticsType() {
+    const select = document.getElementById('analytics-type-select');
+    const selectedType = select.value;
+    
+    // Update URL with analytics type parameter
+    const url = new URL(window.location);
+    url.searchParams.set('analytics_type', selectedType);
+    
+    // Reload page with new analytics type
+    window.location.href = url.toString();
+}
+
+// Update description based on analytics type
+function updateAnalyticsDescription() {
+    const select = document.getElementById('analytics-type-select');
+    const description = document.getElementById('analytics-description');
+    
+    if (select.value === 'vehicle') {
+        description.textContent = 'Comprehensive vehicle registration and synchronization analytics for your organization.';
+    } else {
+        description.textContent = 'Comprehensive visitor analytics and insights for your organization.';
+    }
+}
+
+// Initialize analytics type functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('analytics-type-select');
+    if (select) {
+        // Set initial value from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const analyticsType = urlParams.get('analytics_type') || 'visitor';
+        select.value = analyticsType;
+        
+        // Update description on load
+        updateAnalyticsDescription();
+        
+        // Add event listener for changes
+        select.addEventListener('change', switchAnalyticsType);
+    }
+});
+
+// Update charts when theme changes
+function updateChartsTheme() {
+    // This would be called when theme toggle is used
+    // Implementation depends on your theme toggle system
+}
+</script>
+<!-- Map assets and logic -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function() {
+  const primarySite = {
+    name: "{{ primary_site.name|default_if_none:''|escapejs }}",
+    address: "{{ primary_site.address|default_if_none:''|escapejs }}",
+    postal: "{{ primary_site.postal_code|default_if_none:''|escapejs }}".trim()
+  };
+
+  if (!primarySite || (!primarySite.postal && !primarySite.address)) {
+    return;
+  }
+
+  const statusEl = document.getElementById('map-status');
+  const setStatus = (msg, level) => {
+    if (!statusEl) return;
+    statusEl.textContent = msg || '';
+    statusEl.className = 'text-sm mt-2 ' + (level === 'error' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400');
+  };
+
+  function showNotification(message, type = 'info') {
+    const el = document.createElement('div');
+    el.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 transition-all duration-300 transform translate-x-full shadow-lg';
+    if (type === 'success') el.className += ' bg-green-600';
+    else if (type === 'error') el.className += ' bg-red-600';
+    else if (type === 'warn' || type === 'warning') el.className += ' bg-yellow-600';
+    else el.className += ' bg-blue-600';
+    el.innerHTML = `<div class="flex items-center space-x-2"><span>${message}</span></div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.remove('translate-x-full'));
+    setTimeout(() => { el.classList.add('translate-x-full'); setTimeout(() => el.remove(), 300); }, 3200);
+  }
+
+  const initMap = (lat, lng) => {
+    const map = L.map('site-map');
+    const center = [lat, lng];
+    map.setView(center, 16);
+
+    // Open-source OpenStreetMap raster tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const marker = L.marker(center).addTo(map);
+    const popupContent = `<b>${primarySite.name || 'Site'}</b>` +
+                         (primarySite.address ? `<br/>${primarySite.address}` : '') +
+                         (primarySite.postal ? `<br/>Postal: ${primarySite.postal}` : '');
+    marker.bindPopup(popupContent).openPopup();
+
+    setStatus('Map loaded successfully using accurate OneMap/OpenStreetMap coordinates.', 'info');
+  };
+
+  async function geocodeWithOneMap(searchVal) {
+    let cleanVal = searchVal.trim();
+    if (/^\d{5}$/.test(cleanVal)) {
+      cleanVal = cleanVal.padStart(6, '0');
+    }
+    const url = `https://www.onemap.gov.sg/api/common/elastic/search?searchVal=${encodeURIComponent(cleanVal)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('OneMap network error');
+    const data = await resp.json();
+    const results = (data && data.results) ? data.results : [];
+    if (!results.length) throw new Error('OneMap: no results found');
+    const first = results[0];
+    const lat = parseFloat(first.LATITUDE);
+    const lng = parseFloat(first.LONGITUDE);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('OneMap: invalid coordinates');
+    return { lat, lng, provider: 'onemap' };
+  }
+
+  async function geocodeWithNominatim(queryStr) {
+    const q = encodeURIComponent(queryStr);
+    const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&addressdetails=0`;
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    if (!resp.ok) throw new Error('Nominatim network error');
+    const arr = await resp.json();
+    if (!Array.isArray(arr) || !arr.length) throw new Error('Nominatim: no results found');
+    const lat = parseFloat(arr[0].lat);
+    const lng = parseFloat(arr[0].lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('Nominatim: invalid coordinates');
+    return { lat, lng, provider: 'nominatim' };
+  }
+
+  const geocodeSite = async () => {
+    try {
+      setStatus('Geocoding site location...', 'info');
+      let result;
+      // 1. Try OneMap by Postal Code
+      if (primarySite.postal) {
+        try {
+          result = await geocodeWithOneMap(primarySite.postal);
+        } catch (e) {
+          console.warn('OneMap by postal failed:', e);
+        }
+      }
+      // 2. Try OneMap by Site Address if postal failed
+      if (!result && primarySite.address) {
+        try {
+          result = await geocodeWithOneMap(primarySite.address);
+        } catch (e) {
+          console.warn('OneMap by address failed:', e);
+        }
+      }
+      // 3. Fallback to Nominatim using address + postal + Singapore
+      if (!result) {
+        const fallbackQuery = [primarySite.name, primarySite.address, primarySite.postal, 'Singapore'].filter(Boolean).join(' ');
+        result = await geocodeWithNominatim(fallbackQuery);
+      }
+      initMap(result.lat, result.lng);
+    } catch (err) {
+      console.error(err);
+      setStatus('Unable to show map: ' + err.message, 'error');
+      showNotification('Map failed to load: ' + err.message, 'error');
+    }
+  };
+
+  if (document.getElementById('site-map')) {
+    geocodeSite();
+  }
+})();
+</script>
+{% endblock %}
