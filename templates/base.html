@@ -8,7 +8,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- TailwindCSS CDN -->
+    
+    {% load static %}
+    {% load site_tags %}
+    {% get_site_config as site_config %}
+    
+    {% if site_config.use_local_css %}
+    <!-- TailwindCSS Local (Compiled) - For offline/intranet use -->
+    <link rel="stylesheet" href="{% static 'css/tailwind-local.css' %}">
+    {% else %}
+    <!-- TailwindCSS CDN (Default) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -69,6 +78,7 @@
             }
         }
     </style>
+    {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200">

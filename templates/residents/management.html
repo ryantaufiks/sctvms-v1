@@ -1,26 +1,72 @@
 {% extends 'base.html' %}
-
 {% block title %}Resident Management{% endblock %}
-
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header -->
     <div class="glassmorphism rounded-xl p-6 flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold mb-2">Resident Management</h1>
-            
         </div>
-        <a href="{% url 'site_settings:settings_dashboard' %}" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+        <a
+            href="{% url 'site_settings:settings_dashboard' %}"
+            class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+        >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             Back to Settings
         </a>
     </div>
 
+    <!-- Statistics Cards -->
+    {% if statistics %}
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="glassmorphism rounded-xl p-4">
+            <div class="text-2xl font-bold text-blue-600">{{ statistics.total_residents }}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Total Residents</div>
+        </div>
+        <div class="glassmorphism rounded-xl p-4">
+            <div class="text-2xl font-bold text-green-600">{{ statistics.active_residents }}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Active Residents</div>
+        </div>
+        <div class="glassmorphism rounded-xl p-4">
+            <div class="text-2xl font-bold text-purple-600">{{ statistics.total_vehicles }}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Total Vehicles</div>
+        </div>
+        <div class="glassmorphism rounded-xl p-4">
+            <div class="text-2xl font-bold text-teal-600">{{ statistics.synced_vehicles }}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Synced</div>
+        </div>
+        <div class="glassmorphism rounded-xl p-4">
+            <div class="text-2xl font-bold text-amber-600" id="notSyncedCount">{{ statistics.not_synced_vehicles }}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Not Synced</div>
+            {% if statistics.not_synced_vehicles > 0 %}
+            <button id="syncAllBtn" class="mt-2 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-1">
+                <svg id="syncAllIcon" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                </svg>
+                <span id="syncAllText">Sync All</span>
+            </button>
+            {% endif %}
+        </div>
+        <div class="glassmorphism rounded-xl p-4">
+            <div class="text-2xl font-bold text-orange-600">{{ statistics.fr_provisioned }}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">FR Provisioned</div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Tabs Navigation -->
     <div class="glassmorphism rounded-xl p-2">
         <div class="flex gap-2">
-            <a href="{% url 'residents:management' %}?tab=resident" class="px-4 py-2 rounded-lg {% if active_tab == 'resident' %}bg-blue-600 text-white{% else %}bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700{% endif %}">Resident</a>
-            <a href="{% url 'residents:management' %}?tab=vehicle" class="px-4 py-2 rounded-lg {% if active_tab == 'vehicle' %}bg-blue-600 text-white{% else %}bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700{% endif %}">Vehicle</a>
+            <a
+                href="{% url 'residents:management' %}?tab=resident"
+                class="px-4 py-2 rounded-lg {% if active_tab == 'resident' %}bg-blue-600 text-white{% else %}bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700{% endif %}"
+                >Resident</a
+            >
+            <a
+                href="{% url 'residents:management' %}?tab=vehicle"
+                class="px-4 py-2 rounded-lg {% if active_tab == 'vehicle' %}bg-blue-600 text-white{% else %}bg-white/50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700{% endif %}"
+                >Vehicle</a
+            >
         </div>
     </div>
 
@@ -29,67 +75,140 @@
     <div class="glassmorphism rounded-xl p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold">Resident Report</h2>
-            <button id="openAddResident" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add Resident</button>
+            <div class="flex gap-2">
+                <a
+                    href="{% url 'residents:export_residents' %}?q={{ filters.q|urlencode }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                    Export CSV
+                </a>
+                <button
+                    id="openAddResident"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                    Add Resident
+                </button>
+            </div>
         </div>
         <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3">
             <input type="hidden" name="tab" value="resident" />
             <div class="md:col-span-2">
                 <label class="block text-sm font-medium mb-1">Search</label>
-                <input type="text" name="q" value="{{ filters.q }}" placeholder="Search by resident name" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ filters.q }}"
+                    placeholder="Search by name, phone, email, or plate"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Status</label>
-                <select name="status" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select
+                    name="status"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
-                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
-                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <option
+                        value="active"
+                        {% if filters.status == "active" %}selected{% endif %}
+                    >
+                        Active
+                    </option>
+                    <option
+                        value="inactive"
+                        {% if filters.status == "inactive" %}selected{% endif %}
+                    >
+                        Inactive
+                    </option>
                 </select>
             </div>
             {% if address_config and address_config.enable_tower %}
             <div>
-                <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
-                <select name="tower" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <label class="block text-sm font-medium mb-1"
+                    >{{ address_config.tower_label }}</label
+                >
+                <select
+                    name="tower"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
                     {% for t in address_config.tower_options %}
-                    <option value="{{ t }}" {% if filters.tower == t %}selected{% endif %}>{{ t }}</option>
+                    <option
+                        value="{{ t }}"
+                        {% if filters.tower == t %}selected{% endif %}
+                    >
+                        {{ t }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
-            {% endif %}
-            {% if address_config and address_config.enable_level %}
+            {% endif %} {% if address_config and address_config.enable_level %}
             <div>
-                <label class="block text-sm font-medium mb-1">{{ address_config.level_label }}</label>
-                <select name="level" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <label class="block text-sm font-medium mb-1"
+                    >{{ address_config.level_label }}</label
+                >
+                <select
+                    name="level"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
                     {% for lv in address_config.level_options %}
-                    <option value="{{ lv }}" {% if filters.level == lv %}selected{% endif %}>{{ lv }}</option>
+                    <option
+                        value="{{ lv }}"
+                        {% if filters.level == lv %}selected{% endif %}
+                    >
+                        {{ lv }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
-            {% endif %}
-            {% if address_config and address_config.enable_unit %}
+            {% endif %} {% if address_config and address_config.enable_unit %}
             <div>
-                <label class="block text-sm font-medium mb-1">{{ address_config.unit_label }}</label>
-                <select name="unit" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <label class="block text-sm font-medium mb-1"
+                    >{{ address_config.unit_label }}</label
+                >
+                <select
+                    name="unit"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
                     {% for u in address_config.unit_options %}
-                    <option value="{{ u }}" {% if filters.unit == u %}selected{% endif %}>{{ u }}</option>
+                    <option
+                        value="{{ u }}"
+                        {% if filters.unit == u %}selected{% endif %}
+                    >
+                        {{ u }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
             {% endif %}
             <div class="md:col-span-5 flex gap-3 justify-end">
-                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Apply Filters</button>
-                <a href="{% url 'residents:management' %}?tab=resident" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Reset</a>
+                <button
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                    Apply Filters
+                </button>
+                <a
+                    href="{% url 'residents:management' %}?tab=resident"
+                    class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                    >Reset</a
+                >
             </div>
         </form>
         <div class="mt-4 overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr>
+                        <th class="px-4 py-2 text-left">
+                            <input type="checkbox" id="selectAllResidents" class="rounded" />
+                        </th>
                         <th class="px-4 py-2 text-left">Resident Name</th>
                         {% if address_config and address_config.enable_tower %}
-                        <th class="px-4 py-2 text-left">{{ address_config.tower_label }}</th>
+                        <th class="px-4 py-2 text-left">
+                            {{ address_config.tower_label }}
+                        </th>
                         {% else %}
                         <th class="px-4 py-2 text-left">Tower</th>
                         {% endif %}
@@ -113,6 +232,9 @@
                 <tbody>
                     {% for r in residents_page %}
                     <tr class="border-t">
+                        <td class="px-4 py-2">
+                            <input type="checkbox" name="resident_ids" value="{{ r.id }}" class="resident-checkbox rounded" form="bulkForm" />
+                        </td>
                         <td class="px-4 py-2">{{ r.full_name }}</td>
                         <td class="px-4 py-2">{{ r.tower }}</td>
                         <td class="px-4 py-2">{{ r.level }}</td>
@@ -120,32 +242,99 @@
                         <td class="px-4 py-2">{{ r.phone_number }}</td>
                         <td class="px-4 py-2">{{ r.email }}</td>
                         <td class="px-4 py-2">{{ r.vehicles_count }}</td>
-                        <td class="px-4 py-2">{% if r.is_active %}<span class="text-green-600">Active</span>{% else %}<span class="text-gray-500">Inactive</span>{% endif %}</td>
                         <td class="px-4 py-2">
-                            <a href="{% url 'residents:management' %}?tab=resident&edit_resident_id={{ r.id }}" class="text-blue-600 hover:underline mr-3">Edit</a>
+                            {% if r.is_active %}<span class="text-green-600"
+                                >Active</span
+                            >{% else %}<span class="text-gray-500"
+                                >Inactive</span
+                            >{% endif %}
+                        </td>
+                        <td class="px-4 py-2">
+                            <a
+                                href="{% url 'residents:management' %}?tab=resident&edit_resident_id={{ r.id }}"
+                                class="text-blue-600 hover:underline mr-3"
+                                >Edit</a
+                            >
                             <form method="post" class="inline">
                                 {% csrf_token %}
-                                <input type="hidden" name="action" value="delete_resident" />
-                                <input type="hidden" name="resident_id" value="{{ r.id }}" />
-                                <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete resident?')">Delete</button>
+                                <input
+                                    type="hidden"
+                                    name="tab"
+                                    value="resident"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="q"
+                                    value="{{ filters.q|default:'' }}"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="status"
+                                    value="{{ filters.status|default:'' }}"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="tower"
+                                    value="{{ filters.tower|default:'' }}"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="level"
+                                    value="{{ filters.level|default:'' }}"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="unit"
+                                    value="{{ filters.unit|default:'' }}"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="delete_resident"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="resident_id"
+                                    value="{{ r.id }}"
+                                />
+                                <button
+                                    type="submit"
+                                    class="text-red-600 hover:underline"
+                                    onclick="
+                                        return confirm('Delete resident?');
+                                    "
+                                >
+                                    Delete
+                                </button>
                             </form>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td class="px-4 py-2" colspan="9">No residents found with current filters.</td></tr>
+                    <tr>
+                        <td class="px-4 py-2" colspan="10">
+                            No residents found with current filters.
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="9" class="px-4 py-2">
+                        <td colspan="10" class="px-4 py-2">
                             <div class="mt-3 flex items-center justify-between">
                                 <span>Page {{ residents_page.number }} of {{ residents_page.paginator.num_pages }}</span>
                                 <div class="flex gap-2">
                                     {% if residents_page.has_previous %}
-                                    <a href="{% url 'residents:management' %}?tab=resident&rpage={{ residents_page.previous_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Prev</a>
-                                    {% endif %}
-                                    {% if residents_page.has_next %}
-                                    <a href="{% url 'residents:management' %}?tab=resident&rpage={{ residents_page.next_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Next</a>
+                                    <a
+                                        href="{% url 'residents:management' %}?tab=resident&rpage={{ residents_page.previous_page_number }}&q={{ filters.q|default:'' }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                        class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600"
+                                        >Prev</a
+                                    >
+                                    {% endif %} {% if residents_page.has_next %}
+                                    <a
+                                        href="{% url 'residents:management' %}?tab=resident&rpage={{ residents_page.next_page_number }}&q={{ filters.q|default:'' }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                        class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600"
+                                        >Next</a
+                                    >
                                     {% endif %}
                                 </div>
                             </div>
@@ -154,26 +343,58 @@
                 </tfoot>
             </table>
         </div>
+        
+        <!-- Bulk Operations -->
+        <div class="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <form id="bulkForm" method="post" action="{% url 'residents:bulk_operations' %}">
+                {% csrf_token %}
+                <div class="flex items-center gap-4">
+                    <span class="text-sm font-medium">Bulk Actions:</span>
+                    <select name="bulk_action" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50">
+                        <option value="">Select Action</option>
+                        <option value="activate">Activate Selected</option>
+                        <option value="deactivate">Deactivate Selected</option>
+                        <option value="delete">Delete Selected</option>
+                    </select>
+                    <button type="submit" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700" onclick="return confirm('Are you sure you want to perform this action on selected residents?');">
+                        Apply
+                    </button>
+                    <span id="selectedCount" class="text-sm text-gray-500">0 selected</span>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Add Resident Modal -->
-    <div id="addResidentModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div
+        id="addResidentModal"
+        class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
         <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold">Add Resident</h3>
-                <button id="closeAddResident" class="text-gray-500 hover:text-gray-700">✕</button>
+                <button
+                    id="closeAddResident"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    ✕
+                </button>
             </div>
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_resident" />
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Full Name</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >Full Name</label
+                        >
                         {{ resident_form.full_name }}
                     </div>
                     {% if address_config and address_config.enable_tower %}
                     <div>
-                        <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >{{ address_config.tower_label }}</label
+                        >
                         {{ resident_form.tower }}
                     </div>
                     {% endif %}
@@ -195,99 +416,215 @@
                     </div>
                     {% endif %}
                     <div>
-                        <label class="block text-sm font-medium mb-1">Phone Number</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >Phone Number</label
+                        >
                         {{ resident_form.phone_number }}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Email</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >Email</label
+                        >
                         {{ resident_form.email }}
                     </div>
-                    <div class="md:col-span-2">{{ resident_form.is_active }}</div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-1">Face Image (optional)</label>
+                        {{ resident_form.is_active }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1"
+                            >Face Image (optional)</label
+                        >
                         {{ resident_form.face_image }}
                         <div class="mt-2 flex items-center gap-2">
-                            <button type="button" id="validateFaceBtn" class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Validate Photo</button>
-                            <span id="validateStatus" class="text-sm text-gray-500"></span>
+                            <button
+                                type="button"
+                                id="validateFaceBtn"
+                                class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                            >
+                                Validate Photo
+                            </button>
+                            <span
+                                id="validateStatus"
+                                class="text-sm text-gray-500"
+                            ></span>
                         </div>
-                        <img id="facePreview" alt="Face Preview" class="mt-3 rounded hidden" style="max-height: 160px;" />
-                        <p class="text-xs text-gray-500 mt-1">Photo should be front-facing, well-lit, single face.</p>
+                        <img
+                            id="facePreview"
+                            alt="Face Preview"
+                            class="mt-3 rounded hidden"
+                            style="max-height: 160px"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Photo should be front-facing, well-lit, single face.
+                        </p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">FR Valid From</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >FR Valid From</label
+                        >
                         {{ resident_form.fr_start_time }}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">FR Valid Until</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >FR Valid Until</label
+                        >
                         {{ resident_form.fr_end_time }}
                     </div>
                 </div>
                 <div class="mt-4 flex justify-end gap-3">
-                    <button type="button" id="cancelAddResident" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Save Resident</button>
+                    <button
+                        type="button"
+                        id="cancelAddResident"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                    >
+                        Save Resident
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-    {% endif %}
-
-    {% if active_tab == 'vehicle' %}
+    {% endif %} {% if active_tab == 'vehicle' %}
     <!-- Vehicle Report -->
     <div class="glassmorphism rounded-xl p-6">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-semibold">Vehicle Report</h2>
-            <button id="openAddVehicle" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Add Vehicle</button>
+            <div class="flex gap-2">
+                <a
+                    href="{% url 'residents:export_vehicles' %}?q={{ filters.q|urlencode }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                    class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                >
+                    Export CSV
+                </a>
+                <a
+                    href="{% url 'residents:export_vehicles_pdf' %}?q={{ filters.q|urlencode }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                    Export PDF
+                </a>
+                <a
+                    href="{% url 'residents:bulk_upload' %}"
+                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                    Bulk Upload
+                </a>
+                <button
+                    id="openAddVehicle"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                    Add Vehicle
+                </button>
+            </div>
         </div>
         <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3">
             <input type="hidden" name="tab" value="vehicle" />
             <div class="md:col-span-2">
                 <label class="block text-sm font-medium mb-1">Search</label>
-                <input type="text" name="q" value="{{ filters.q }}" placeholder="Search by plate or resident name" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ filters.q }}"
+                    placeholder="Search by plate or resident name"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Status</label>
-                <select name="status" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select
+                    name="status"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
-                    <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
-                    <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <option
+                        value="active"
+                        {% if filters.status == "active" %}selected{% endif %}
+                    >
+                        Active
+                    </option>
+                    <option
+                        value="inactive"
+                        {% if filters.status == "inactive" %}selected{% endif %}
+                    >
+                        Inactive
+                    </option>
                 </select>
             </div>
             {% if address_config and address_config.enable_tower %}
             <div>
-                <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
-                <select name="tower" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <label class="block text-sm font-medium mb-1"
+                    >{{ address_config.tower_label }}</label
+                >
+                <select
+                    name="tower"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
                     {% for t in address_config.tower_options %}
-                    <option value="{{ t }}" {% if filters.tower == t %}selected{% endif %}>{{ t }}</option>
+                    <option
+                        value="{{ t }}"
+                        {% if filters.tower == t %}selected{% endif %}
+                    >
+                        {{ t }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
-            {% endif %}
-            {% if address_config and address_config.enable_level %}
+            {% endif %} {% if address_config and address_config.enable_level %}
             <div>
-                <label class="block text-sm font-medium mb-1">{{ address_config.level_label }}</label>
-                <select name="level" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <label class="block text-sm font-medium mb-1"
+                    >{{ address_config.level_label }}</label
+                >
+                <select
+                    name="level"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
                     {% for lv in address_config.level_options %}
-                    <option value="{{ lv }}" {% if filters.level == lv %}selected{% endif %}>{{ lv }}</option>
+                    <option
+                        value="{{ lv }}"
+                        {% if filters.level == lv %}selected{% endif %}
+                    >
+                        {{ lv }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
-            {% endif %}
-            {% if address_config and address_config.enable_unit %}
+            {% endif %} {% if address_config and address_config.enable_unit %}
             <div>
-                <label class="block text-sm font-medium mb-1">{{ address_config.unit_label }}</label>
-                <select name="unit" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <label class="block text-sm font-medium mb-1"
+                    >{{ address_config.unit_label }}</label
+                >
+                <select
+                    name="unit"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                     <option value="">All</option>
                     {% for u in address_config.unit_options %}
-                    <option value="{{ u }}" {% if filters.unit == u %}selected{% endif %}>{{ u }}</option>
+                    <option
+                        value="{{ u }}"
+                        {% if filters.unit == u %}selected{% endif %}
+                    >
+                        {{ u }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
             {% endif %}
             <div class="md:col-span-5 flex gap-3 justify-end">
-                <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Apply Filters</button>
-                <a href="{% url 'residents:management' %}?tab=vehicle" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Reset</a>
+                <button
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                >
+                    Apply Filters
+                </button>
+                <a
+                    href="{% url 'residents:management' %}?tab=vehicle"
+                    class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                    >Reset</a
+                >
             </div>
         </form>
         <div class="mt-4 overflow-x-auto">
@@ -298,6 +635,7 @@
                         <th class="px-4 py-2 text-left">Plate No 1</th>
                         <th class="px-4 py-2 text-left">Plate No 2</th>
                         <th class="px-4 py-2 text-left">Plate No 3</th>
+                        <th class="px-4 py-2 text-left">Plate No 4</th>
                         <th class="px-4 py-2 text-left">Status</th>
                     </tr>
                 </thead>
@@ -306,58 +644,443 @@
                     <tr class="border-t">
                         <td class="px-4 py-2">{{ row.resident.full_name }}</td>
                         <td class="px-4 py-2">
-                            {% if row.plates|length > 0 %}
-                                {{ row.plates.0.plate_number }}
-                                <a href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ row.plates.0.id }}" class="text-blue-600 hover:underline ml-2">Edit</a>
-                                <form method="post" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="delete_vehicle" />
-                                    <input type="hidden" name="vehicle_id" value="{{ row.plates.0.id }}" />
-                                    <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete vehicle?')">Delete</button>
-                                </form>
-                            {% else %}-{% endif %}
+                            {% with p=row.plates.0 %}{% if p %}{{ p.plate_number }}
+                            <a
+                                href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ p.id }}&q={{ filters.q|urlencode }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                class="ml-2"
+                                aria-label="Edit"
+                            >
+                                <svg
+                                    class="w-4 h-4 text-blue-600 inline"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536M4 16v4h4l10.06-10.06a2 2 0 10-2.828-2.828L4 16z"
+                                    />
+                                </svg>
+                            </a>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="delete_vehicle"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="vehicle_id"
+                                    value="{{ p.id }}"
+                                />
+                                <button
+                                    type="submit"
+                                    class="ml-2"
+                                    aria-label="Delete"
+                                    onclick="return confirm('Delete vehicle?');"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-red-600 inline"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7m5-4h4m-9 4h14"
+                                        />
+                                    </svg>
+                                </button>
+                            </form>
+                            <button
+                                type="button"
+                                class="ml-2 open-remarks-modal"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                data-remarks="{{ p.remarks|default:'' }}"
+                                aria-label="Add/Edit Remarks"
+                                title="{% if p.remarks %}{{ p.remarks }}{% else %}Add remarks{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.remarks %}text-green-600{% else %}text-gray-400{% endif %} inline hover:text-green-700"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                class="ml-2 sync-vehicle-btn"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                aria-label="Sync to Camera"
+                                title="{% if p.whitelist_synced %}Synced{% if p.whitelist_synced_at %} at {{ p.whitelist_synced_at|date:'d M Y H:i' }}{% endif %} - Click to resync{% else %}Not synced - Click to sync{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.whitelist_synced %}text-green-600{% else %}text-orange-500{% endif %} inline hover:text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                            {% else %}-{% endif %} {% endwith %}
                         </td>
                         <td class="px-4 py-2">
-                            {% if row.plates|length > 1 %}
-                                {{ row.plates.1.plate_number }}
-                                <a href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ row.plates.1.id }}" class="text-blue-600 hover:underline ml-2">Edit</a>
-                                <form method="post" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="delete_vehicle" />
-                                    <input type="hidden" name="vehicle_id" value="{{ row.plates.1.id }}" />
-                                    <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete vehicle?')">Delete</button>
-                                </form>
-                            {% else %}-{% endif %}
+                            {% with p=row.plates.1 %}{% if p %}{{ p.plate_number }}
+                            <a
+                                href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ p.id }}&q={{ filters.q|urlencode }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                class="ml-2"
+                                aria-label="Edit"
+                            >
+                                <svg
+                                    class="w-4 h-4 text-blue-600 inline"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536M4 16v4h4l10.06-10.06a2 2 0 10-2.828-2.828L4 16z"
+                                    />
+                                </svg>
+                            </a>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="delete_vehicle"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="vehicle_id"
+                                    value="{{ p.id }}"
+                                />
+                                <button
+                                    type="submit"
+                                    class="ml-2"
+                                    aria-label="Delete"
+                                    onclick="return confirm('Delete vehicle?');"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-red-600 inline"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7m5-4h4m-9 4h14"
+                                        />
+                                    </svg>
+                                </button>
+                            </form>
+                            <button
+                                type="button"
+                                class="ml-2 open-remarks-modal"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                data-remarks="{{ p.remarks|default:'' }}"
+                                aria-label="Add/Edit Remarks"
+                                title="{% if p.remarks %}{{ p.remarks }}{% else %}Add remarks{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.remarks %}text-green-600{% else %}text-gray-400{% endif %} inline hover:text-green-700"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                class="ml-2 sync-vehicle-btn"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                aria-label="Sync to Camera"
+                                title="{% if p.whitelist_synced %}Synced{% if p.whitelist_synced_at %} at {{ p.whitelist_synced_at|date:'d M Y H:i' }}{% endif %} - Click to resync{% else %}Not synced - Click to sync{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.whitelist_synced %}text-green-600{% else %}text-orange-500{% endif %} inline hover:text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                            {% else %}-{% endif %} {% endwith %}
                         </td>
                         <td class="px-4 py-2">
-                            {% if row.plates|length > 2 %}
-                                {{ row.plates.2.plate_number }}
-                                <a href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ row.plates.2.id }}" class="text-blue-600 hover:underline ml-2">Edit</a>
-                                <form method="post" class="inline">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="delete_vehicle" />
-                                    <input type="hidden" name="vehicle_id" value="{{ row.plates.2.id }}" />
-                                    <button type="submit" class="text-red-600 hover:underline" onclick="return confirm('Delete vehicle?')">Delete</button>
-                                </form>
-                            {% else %}-{% endif %}
+                            {% with p=row.plates.2 %}{% if p %}{{ p.plate_number }}
+                            <a
+                                href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ p.id }}&q={{ filters.q|urlencode }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                class="ml-2"
+                                aria-label="Edit"
+                            >
+                                <svg
+                                    class="w-4 h-4 text-blue-600 inline"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536M4 16v4h4l10.06-10.06a2 2 0 10-2.828-2.828L4 16z"
+                                    />
+                                </svg>
+                            </a>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="delete_vehicle"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="vehicle_id"
+                                    value="{{ p.id }}"
+                                />
+                                <button
+                                    type="submit"
+                                    class="ml-2"
+                                    aria-label="Delete"
+                                    onclick="return confirm('Delete vehicle?');"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-red-600 inline"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7m5-4h4m-9 4h14"
+                                        />
+                                    </svg>
+                                </button>
+                            </form>
+                            <button
+                                type="button"
+                                class="ml-2 open-remarks-modal"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                data-remarks="{{ p.remarks|default:'' }}"
+                                aria-label="Add/Edit Remarks"
+                                title="{% if p.remarks %}{{ p.remarks }}{% else %}Add remarks{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.remarks %}text-green-600{% else %}text-gray-400{% endif %} inline hover:text-green-700"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                class="ml-2 sync-vehicle-btn"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                aria-label="Sync to Camera"
+                                title="{% if p.whitelist_synced %}Synced{% if p.whitelist_synced_at %} at {{ p.whitelist_synced_at|date:'d M Y H:i' }}{% endif %} - Click to resync{% else %}Not synced - Click to sync{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.whitelist_synced %}text-green-600{% else %}text-orange-500{% endif %} inline hover:text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                            {% else %}-{% endif %} {% endwith %}
                         </td>
-                        <td class="px-4 py-2">{% if row.has_active %}<span class="text-green-600">Active</span>{% else %}<span class="text-gray-500">Inactive</span>{% endif %}</td>
+                        <td class="px-4 py-2">
+                            {% with p=row.plates.3 %}{% if p %}{{ p.plate_number }}
+                            <a
+                                href="{% url 'residents:management' %}?tab=vehicle&edit_vehicle_id={{ p.id }}&q={{ filters.q|urlencode }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                class="ml-2"
+                                aria-label="Edit"
+                            >
+                                <svg
+                                    class="w-4 h-4 text-blue-600 inline"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536M4 16v4h4l10.06-10.06a2 2 0 10-2.828-2.828L4 16z"
+                                    />
+                                </svg>
+                            </a>
+                            <form method="post" class="inline">
+                                {% csrf_token %}
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="delete_vehicle"
+                                />
+                                <input
+                                    type="hidden"
+                                    name="vehicle_id"
+                                    value="{{ p.id }}"
+                                />
+                                <button
+                                    type="submit"
+                                    class="ml-2"
+                                    aria-label="Delete"
+                                    onclick="return confirm('Delete vehicle?');"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-red-600 inline"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7m5-4h4m-9 4h14"
+                                        />
+                                    </svg>
+                                </button>
+                            </form>
+                            <button
+                                type="button"
+                                class="ml-2 open-remarks-modal"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                data-remarks="{{ p.remarks|default:'' }}"
+                                aria-label="Add/Edit Remarks"
+                                title="{% if p.remarks %}{{ p.remarks }}{% else %}Add remarks{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.remarks %}text-green-600{% else %}text-gray-400{% endif %} inline hover:text-green-700"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                    />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                class="ml-2 sync-vehicle-btn"
+                                data-vehicle-id="{{ p.id }}"
+                                data-plate-number="{{ p.plate_number }}"
+                                aria-label="Sync to Camera"
+                                title="{% if p.whitelist_synced %}Synced{% if p.whitelist_synced_at %} at {{ p.whitelist_synced_at|date:'d M Y H:i' }}{% endif %} - Click to resync{% else %}Not synced - Click to sync{% endif %}"
+                            >
+                                <svg
+                                    class="w-4 h-4 {% if p.whitelist_synced %}text-green-600{% else %}text-orange-500{% endif %} inline hover:text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                </svg>
+                            </button>
+                            {% else %}-{% endif %} {% endwith %}
+                        </td>
+                        <td class="px-4 py-2">
+                            {% if row.has_active %}<span class="text-green-600"
+                                >Active</span
+                            >{% else %}<span class="text-gray-500"
+                                >Inactive</span
+                            >{% endif %}
+                        </td>
                     </tr>
                     {% empty %}
-                    <tr><td class="px-4 py-2" colspan="5">No vehicles found with current filters.</td></tr>
+                    <tr>
+                        <td class="px-4 py-2" colspan="6">
+                            No vehicles found with current filters.
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="5" class="px-4 py-2">
+                        <td colspan="6" class="px-4 py-2">
                             <div class="mt-3 flex items-center justify-between">
                                 <span>Page {{ vehicles_page.number }} of {{ vehicles_page.paginator.num_pages }}</span>
                                 <div class="flex gap-2">
                                     {% if vehicles_page.has_previous %}
-                                    <a href="{% url 'residents:management' %}?tab=vehicle&vpage={{ vehicles_page.previous_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Prev</a>
-                                    {% endif %}
-                                    {% if vehicles_page.has_next %}
-                                    <a href="{% url 'residents:management' %}?tab=vehicle&vpage={{ vehicles_page.next_page_number }}&q={{ filters.q }}&status={{ filters.status }}&tower={{ filters.tower }}&level={{ filters.level }}&unit={{ filters.unit }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600">Next</a>
+                                    <a
+                                        href="{% url 'residents:management' %}?tab=vehicle&vpage={{ vehicles_page.previous_page_number }}&q={{ filters.q|default:'' }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                        class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600"
+                                        >Prev</a
+                                    >
+                                    {% endif %} {% if vehicles_page.has_next %}
+                                    <a
+                                        href="{% url 'residents:management' %}?tab=vehicle&vpage={{ vehicles_page.next_page_number }}&q={{ filters.q|default:'' }}&status={{ filters.status|default:'' }}&tower={{ filters.tower|default:'' }}&level={{ filters.level|default:'' }}&unit={{ filters.unit|default:'' }}"
+                                        class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600"
+                                        >Next</a
+                                    >
                                     {% endif %}
                                 </div>
                             </div>
@@ -369,66 +1092,132 @@
     </div>
 
     <!-- Add Vehicle Modal -->
-    <div id="addVehicleModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div
+        id="addVehicleModal"
+        class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
         <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold">Add Vehicle</h3>
-                <button id="closeAddVehicle" class="text-gray-500 hover:text-gray-700">✕</button>
+                <button
+                    id="closeAddVehicle"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    ✕
+                </button>
             </div>
             <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_vehicle" />
                 <div class="md:col-span-2">
-                    <label class="block text-sm font-medium mb-1">Resident</label>
-                    <select name="resident_id" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
-                        <option value="" disabled selected>Select resident</option>
+                    <label class="block text-sm font-medium mb-1"
+                        >Resident</label
+                    >
+                    <input
+                        type="text"
+                        id="residentSearch"
+                        placeholder="Type to search resident..."
+                        class="w-full px-3 py-2 mb-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <select
+                        name="resident_id"
+                        id="residentSelect"
+                        class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        size="6"
+                    >
+                        <option value="" disabled selected>
+                            Select resident
+                        </option>
                         {% for r in residents %}
                         <option value="{{ r.id }}">{{ r.full_name }}{% if r.unit %} - {{ r.unit }}{% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Plate Number</label>
+                    <label class="block text-sm font-medium mb-1"
+                        >Plate Number</label
+                    >
                     {{ vehicle_form.plate_number }}
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Start Time</label>
+                    <label class="block text-sm font-medium mb-1"
+                        >Plate Order (1-4)</label
+                    >
+                    {{ vehicle_form.plate_order }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1"
+                        >Start Time</label
+                    >
                     {{ vehicle_form.start_time }}
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">End Time</label>
+                    <label class="block text-sm font-medium mb-1"
+                        >End Time</label
+                    >
                     {{ vehicle_form.end_time }}
                 </div>
                 <div class="md:col-span-2">{{ vehicle_form.is_active }}</div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium mb-1"
+                        >Remarks</label
+                    >
+                    {{ vehicle_form.remarks }}
+                </div>
                 <div class="md:col-span-2 mt-2 flex justify-end gap-3">
-                    <button type="button" id="cancelAddVehicle" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
-                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Save Vehicle</button>
+                    <button
+                        type="button"
+                        id="cancelAddVehicle"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                    >
+                        Save Vehicle
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-    {% endif %}
-
-    {% if edit_resident_form %}
+    {% endif %} {% if edit_resident_form %}
     <!-- Edit Resident Modal -->
-    <div id="editResidentModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div
+        id="editResidentModal"
+        class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
         <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold">Edit Resident</h3>
-                <button id="closeEditResident" class="text-gray-500 hover:text-gray-700">✕</button>
+                <button
+                    id="closeEditResident"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    ✕
+                </button>
             </div>
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="edit_resident" />
-                <input type="hidden" name="resident_id" value="{{ edit_resident_form.instance.id }}" />
+                <input
+                    type="hidden"
+                    name="resident_id"
+                    value="{{ edit_resident_form.instance.id }}"
+                />
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Full Name</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >Full Name</label
+                        >
                         {{ edit_resident_form.full_name }}
                     </div>
                     {% if address_config and address_config.enable_tower %}
                     <div>
-                        <label class="block text-sm font-medium mb-1">{{ address_config.tower_label }}</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >{{ address_config.tower_label }}</label
+                        >
                         {{ edit_resident_form.tower }}
                     </div>
                     {% endif %}
@@ -450,217 +1239,696 @@
                     </div>
                     {% endif %}
                     <div>
-                        <label class="block text-sm font-medium mb-1">Phone Number</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >Phone Number</label
+                        >
                         {{ edit_resident_form.phone_number }}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">Email</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >Email</label
+                        >
                         {{ edit_resident_form.email }}
                     </div>
-                    <div class="md:col-span-2">{{ edit_resident_form.is_active }}</div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-1">Face Image (optional)</label>
+                        {{ edit_resident_form.is_active }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-1"
+                            >Face Image (optional)</label
+                        >
                         {{ edit_resident_form.face_image }}
                         <div class="mt-2 flex items-center gap-2">
-                            <button type="button" id="validateFaceBtnEdit" class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Validate Photo</button>
-                            <span id="validateStatusEdit" class="text-sm text-gray-500"></span>
+                            <button
+                                type="button"
+                                id="validateFaceBtnEdit"
+                                class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                            >
+                                Validate Photo
+                            </button>
+                            <span
+                                id="validateStatusEdit"
+                                class="text-sm text-gray-500"
+                            ></span>
                         </div>
-                        <img id="facePreviewEdit" alt="Face Preview" class="mt-3 rounded hidden" style="max-height: 160px;" />
-                        <p class="text-xs text-gray-500 mt-1">Photo should be front-facing, well-lit, single face.</p>
+                        <img
+                            id="facePreviewEdit"
+                            alt="Face Preview"
+                            class="mt-3 rounded hidden"
+                            style="max-height: 160px"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Photo should be front-facing, well-lit, single face.
+                        </p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">FR Valid From</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >FR Valid From</label
+                        >
                         {{ edit_resident_form.fr_start_time }}
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-1">FR Valid Until</label>
+                        <label class="block text-sm font-medium mb-1"
+                            >FR Valid Until</label
+                        >
                         {{ edit_resident_form.fr_end_time }}
                     </div>
                 </div>
                 <div class="mt-4 flex justify-end gap-3">
-                    <button type="button" id="cancelEditResident" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Save Changes</button>
+                    <button
+                        type="button"
+                        id="cancelEditResident"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                    >
+                        Save Changes
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-    {% endif %}
-
-    {% if edit_vehicle_form %}
+    {% endif %} {% if edit_vehicle_form %}
     <!-- Edit Vehicle Modal -->
-    <div id="editVehicleModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div
+        id="editVehicleModal"
+        class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
         <div class="glassmorphism rounded-xl p-6 w-full max-w-2xl">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold">Edit Vehicle</h3>
-                <button id="closeEditVehicle" class="text-gray-500 hover:text-gray-700">✕</button>
+                <button
+                    id="closeEditVehicle"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    ✕
+                </button>
             </div>
             <form method="post" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="edit_vehicle" />
-                <input type="hidden" name="vehicle_id" value="{{ edit_vehicle_form.instance.id }}" />
+                <input
+                    type="hidden"
+                    name="vehicle_id"
+                    value="{{ edit_vehicle_form.instance.id }}"
+                />
                 <div class="md:col-span-2">
-                    <label class="block text-sm font-medium mb-1">Resident</label>
-                    <input type="text" value="{{ edit_vehicle_form.instance.resident.full_name }}{% if edit_vehicle_form.instance.resident.unit %} - {{ edit_vehicle_form.instance.resident.unit }}{% endif %}" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50" disabled />
+                    <label class="block text-sm font-medium mb-1"
+                        >Resident</label
+                    >
+                    <input
+                        type="text"
+                        value="{{ edit_vehicle_form.instance.resident.full_name }}{% if edit_vehicle_form.instance.resident.unit %} - {{ edit_vehicle_form.instance.resident.unit }}{% endif %}"
+                        class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50"
+                        disabled
+                    />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Plate Number</label>
+                    <label class="block text-sm font-medium mb-1"
+                        >Plate Number</label
+                    >
                     {{ edit_vehicle_form.plate_number }}
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">Start Time</label>
+                    <label class="block text-sm font-medium mb-1"
+                        >Plate Order (1-4)</label
+                    >
+                    {{ edit_vehicle_form.plate_order }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1"
+                        >Start Time</label
+                    >
                     {{ edit_vehicle_form.start_time }}
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1">End Time</label>
+                    <label class="block text-sm font-medium mb-1"
+                        >End Time</label
+                    >
                     {{ edit_vehicle_form.end_time }}
                 </div>
-                <div class="md:col-span-2">{{ edit_vehicle_form.is_active }}</div>
+                <div class="md:col-span-2">
+                    {{ edit_vehicle_form.is_active }}
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium mb-1"
+                        >Remarks</label
+                    >
+                    {{ edit_vehicle_form.remarks }}
+                </div>
                 <div class="md:col-span-2 mt-2 flex justify-end gap-3">
-                    <button type="button" id="cancelEditVehicle" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">Cancel</button>
-                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Save Changes</button>
+                    <button
+                        type="button"
+                        id="cancelEditVehicle"
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                    >
+                        Save Changes
+                    </button>
                 </div>
             </form>
         </div>
     </div>
     {% endif %}
 
+    <!-- Remarks Modal -->
+    <div
+        id="remarksModal"
+        class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50"
+    >
+        <div class="glassmorphism rounded-xl p-6 w-full max-w-md">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Vehicle Remarks</h3>
+                <button
+                    id="closeRemarksModal"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    ✕
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Plate: <span id="remarksPlateNumber" class="font-semibold"></span>
+                </p>
+                <input type="hidden" id="remarksVehicleId" />
+                <label class="block text-sm font-medium mb-1">Remarks / Comments</label>
+                <textarea
+                    id="remarksText"
+                    rows="4"
+                    class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50"
+                    placeholder="Enter remarks or comments for this vehicle..."
+                ></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button
+                    type="button"
+                    id="cancelRemarksModal"
+                    class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    id="saveRemarksBtn"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                >
+                    Save Remarks
+                </button>
+            </div>
+            <p id="remarksStatus" class="mt-2 text-sm text-center"></p>
+        </div>
+    </div>
+
     <script>
         // Modal toggles (vanilla JS)
-        const addResidentModal = document.getElementById('addResidentModal');
-        const addVehicleModal = document.getElementById('addVehicleModal');
-        const editResidentModal = document.getElementById('editResidentModal');
-        const editVehicleModal = document.getElementById('editVehicleModal');
-        const openAddResident = document.getElementById('openAddResident');
-        const openAddVehicle = document.getElementById('openAddVehicle');
-        const closeAddResident = document.getElementById('closeAddResident');
-        const closeAddVehicle = document.getElementById('closeAddVehicle');
-        const cancelAddResident = document.getElementById('cancelAddResident');
-        const cancelAddVehicle = document.getElementById('cancelAddVehicle');
-        const closeEditResident = document.getElementById('closeEditResident');
-        const cancelEditResident = document.getElementById('cancelEditResident');
-        const closeEditVehicle = document.getElementById('closeEditVehicle');
-        const cancelEditVehicle = document.getElementById('cancelEditVehicle');
+        const addResidentModal = document.getElementById("addResidentModal");
+        const addVehicleModal = document.getElementById("addVehicleModal");
+        const editResidentModal = document.getElementById("editResidentModal");
+        const editVehicleModal = document.getElementById("editVehicleModal");
+        const openAddResident = document.getElementById("openAddResident");
+        const openAddVehicle = document.getElementById("openAddVehicle");
+        const closeAddResident = document.getElementById("closeAddResident");
+        const closeAddVehicle = document.getElementById("closeAddVehicle");
+        const cancelAddResident = document.getElementById("cancelAddResident");
+        const cancelAddVehicle = document.getElementById("cancelAddVehicle");
+        const closeEditResident = document.getElementById("closeEditResident");
+        const cancelEditResident =
+            document.getElementById("cancelEditResident");
+        const closeEditVehicle = document.getElementById("closeEditVehicle");
+        const cancelEditVehicle = document.getElementById("cancelEditVehicle");
 
-        function show(el) { if (el) { el.classList.remove('hidden'); el.classList.add('flex'); } }
-        function hide(el) { if (el) { el.classList.add('hidden'); el.classList.remove('flex'); } }
+        function show(el) {
+            if (el) {
+                el.classList.remove("hidden");
+                el.classList.add("flex");
+            }
+        }
+        function hide(el) {
+            if (el) {
+                el.classList.add("hidden");
+                el.classList.remove("flex");
+            }
+        }
 
-        if (openAddResident) openAddResident.addEventListener('click', () => show(addResidentModal));
-        if (closeAddResident) closeAddResident.addEventListener('click', () => hide(addResidentModal));
-        if (cancelAddResident) cancelAddResident.addEventListener('click', () => hide(addResidentModal));
+        if (openAddResident)
+            openAddResident.addEventListener("click", () =>
+                show(addResidentModal),
+            );
+        if (closeAddResident)
+            closeAddResident.addEventListener("click", () =>
+                hide(addResidentModal),
+            );
+        if (cancelAddResident)
+            cancelAddResident.addEventListener("click", () =>
+                hide(addResidentModal),
+            );
 
-        if (openAddVehicle) openAddVehicle.addEventListener('click', () => show(addVehicleModal));
-        if (closeAddVehicle) closeAddVehicle.addEventListener('click', () => hide(addVehicleModal));
-        if (cancelAddVehicle) cancelAddVehicle.addEventListener('click', () => hide(addVehicleModal));
+        if (openAddVehicle)
+            openAddVehicle.addEventListener("click", () =>
+                show(addVehicleModal),
+            );
+        if (closeAddVehicle)
+            closeAddVehicle.addEventListener("click", () =>
+                hide(addVehicleModal),
+            );
+        if (cancelAddVehicle)
+            cancelAddVehicle.addEventListener("click", () =>
+                hide(addVehicleModal),
+            );
 
-        if (closeEditResident) closeEditResident.addEventListener('click', () => hide(editResidentModal));
-        if (cancelEditResident) cancelEditResident.addEventListener('click', () => hide(editResidentModal));
-        if (closeEditVehicle) closeEditVehicle.addEventListener('click', () => hide(editVehicleModal));
-        if (cancelEditVehicle) cancelEditVehicle.addEventListener('click', () => hide(editVehicleModal));
+        if (closeEditResident)
+            closeEditResident.addEventListener("click", () =>
+                hide(editResidentModal),
+            );
+        if (cancelEditResident)
+            cancelEditResident.addEventListener("click", () =>
+                hide(editResidentModal),
+            );
+        if (closeEditVehicle)
+            closeEditVehicle.addEventListener("click", () =>
+                hide(editVehicleModal),
+            );
+        if (cancelEditVehicle)
+            cancelEditVehicle.addEventListener("click", () =>
+                hide(editVehicleModal),
+            );
 
         // Auto-open edit modals when params present
         const params = new URLSearchParams(window.location.search);
-        if (params.get('edit_resident_id') && editResidentModal) {
+        if (params.get("edit_resident_id") && editResidentModal) {
             show(editResidentModal);
         }
-        if (params.get('edit_vehicle_id') && editVehicleModal) {
+        if (params.get("edit_vehicle_id") && editVehicleModal) {
             show(editVehicleModal);
         }
     </script>
 </div>
 
 <script>
-// Validate face photo using existing visitors API and show cropped preview
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('validateFaceBtn');
-  const input = document.querySelector('input[name="face_image"]');
-  const preview = document.getElementById('facePreview');
-  const statusEl = document.getElementById('validateStatus');
-  if (!btn || !input) return;
-  btn.addEventListener('click', async () => {
-    statusEl.textContent = '';
-    preview.classList.add('hidden');
-    if (!input.files || !input.files[0]) {
-      statusEl.textContent = 'Please choose a photo first.';
-      return;
-    }
-    try {
-      const file = input.files[0];
-      const b64 = await fileToBase64(file);
-      const payload = { pass_number: 'resident', imageData: b64 };
-      const resp = await fetch('/visitors/api/self-register/validate-photo/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        body: JSON.stringify(payload)
-      });
-      const data = await resp.json();
-      if (data.status === 'success' && data.preview) {
-        preview.src = data.preview;
-        preview.classList.remove('hidden');
-        statusEl.textContent = 'Photo OK: single face detected and cropped.';
-      } else {
-        statusEl.textContent = data.message || 'Photo not valid (no face or multiple faces).';
-      }
-    } catch (e) {
-      statusEl.textContent = 'Validation failed.';
-    }
-  });
-});
+    // Validate face photo using existing visitors API and show cropped preview
+    document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("validateFaceBtn");
+        const input = document.querySelector('input[name="face_image"]');
+        const preview = document.getElementById("facePreview");
+        const statusEl = document.getElementById("validateStatus");
+        if (!btn || !input) return;
+        btn.addEventListener("click", async () => {
+            statusEl.textContent = "";
+            preview.classList.add("hidden");
+            if (!input.files || !input.files[0]) {
+                statusEl.textContent = "Please choose a photo first.";
+                return;
+            }
+            try {
+                const file = input.files[0];
+                const b64 = await fileToBase64(file);
+                const payload = { pass_number: "resident", imageData: b64 };
+                const resp = await fetch(
+                    "/visitors/api/self-register/validate-photo/",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCsrfToken(),
+                        },
+                        body: JSON.stringify(payload),
+                    },
+                );
+                const data = await resp.json();
+                if (data.status === "success" && data.preview) {
+                    preview.src = data.preview;
+                    preview.classList.remove("hidden");
+                    statusEl.textContent =
+                        "Photo OK: single face detected and cropped.";
+                } else {
+                    statusEl.textContent =
+                        data.message ||
+                        "Photo not valid (no face or multiple faces).";
+                }
+            } catch (e) {
+                statusEl.textContent = "Validation failed.";
+            }
+        });
+    });
 
-// Edit modal face validation
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('validateFaceBtnEdit');
-  const modal = document.getElementById('editResidentModal');
-  const input = modal ? modal.querySelector('input[name="face_image"]') : null;
-  const preview = document.getElementById('facePreviewEdit');
-  const statusEl = document.getElementById('validateStatusEdit');
-  if (!btn || !input) return;
-  btn.addEventListener('click', async () => {
-    statusEl.textContent = '';
-    if (preview) preview.classList.add('hidden');
-    if (!input.files || !input.files[0]) {
-      statusEl.textContent = 'Please choose a photo first.';
-      return;
-    }
-    try {
-      const file = input.files[0];
-      const b64 = await fileToBase64(file);
-      const payload = { pass_number: 'resident', imageData: b64 };
-      const resp = await fetch('/visitors/api/self-register/validate-photo/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        body: JSON.stringify(payload)
-      });
-      const data = await resp.json();
-      if (data.status === 'success' && data.preview) {
-        if (preview) { preview.src = data.preview; preview.classList.remove('hidden'); }
-        statusEl.textContent = 'Photo OK: single face detected and cropped.';
-      } else {
-        statusEl.textContent = data.message || 'Photo not valid (no face or multiple faces).';
-      }
-    } catch (e) {
-      statusEl.textContent = 'Validation failed.';
-    }
-  });
-});
+    // Edit modal face validation
+    document.addEventListener("DOMContentLoaded", () => {
+        const btn = document.getElementById("validateFaceBtnEdit");
+        const modal = document.getElementById("editResidentModal");
+        const input = modal
+            ? modal.querySelector('input[name="face_image"]')
+            : null;
+        const preview = document.getElementById("facePreviewEdit");
+        const statusEl = document.getElementById("validateStatusEdit");
+        if (!btn || !input) return;
+        btn.addEventListener("click", async () => {
+            statusEl.textContent = "";
+            if (preview) preview.classList.add("hidden");
+            if (!input.files || !input.files[0]) {
+                statusEl.textContent = "Please choose a photo first.";
+                return;
+            }
+            try {
+                const file = input.files[0];
+                const b64 = await fileToBase64(file);
+                const payload = { pass_number: "resident", imageData: b64 };
+                const resp = await fetch(
+                    "/visitors/api/self-register/validate-photo/",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCsrfToken(),
+                        },
+                        body: JSON.stringify(payload),
+                    },
+                );
+                const data = await resp.json();
+                if (data.status === "success" && data.preview) {
+                    if (preview) {
+                        preview.src = data.preview;
+                        preview.classList.remove("hidden");
+                    }
+                    statusEl.textContent =
+                        "Photo OK: single face detected and cropped.";
+                } else {
+                    statusEl.textContent =
+                        data.message ||
+                        "Photo not valid (no face or multiple faces).";
+                }
+            } catch (e) {
+                statusEl.textContent = "Validation failed.";
+            }
+        });
+    });
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-function getCsrfToken() {
-  const name = 'csrftoken=';
-  const decoded = decodeURIComponent(document.cookie);
-  const parts = decoded.split(';');
-  for (let part of parts) {
-    part = part.trim();
-    if (part.startsWith(name)) return part.substring(name.length);
-  }
-  const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
-  return el ? el.value : '';
-}
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+    function getCsrfToken() {
+        const name = "csrftoken=";
+        const decoded = decodeURIComponent(document.cookie);
+        const parts = decoded.split(";");
+        for (let part of parts) {
+            part = part.trim();
+            if (part.startsWith(name)) return part.substring(name.length);
+        }
+        const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        return el ? el.value : "";
+    }
+
+    // Resident Search Filter for Add Vehicle Modal
+    document.addEventListener("DOMContentLoaded", () => {
+        const searchInput = document.getElementById("residentSearch");
+        const select = document.getElementById("residentSelect");
+        
+        if (!searchInput || !select) return;
+        
+        // Store all options for filtering
+        const allOptions = Array.from(select.options).map(opt => ({
+            value: opt.value,
+            text: opt.textContent,
+            disabled: opt.disabled
+        }));
+        
+        // Track currently selected value
+        let selectedValue = "";
+        
+        select.addEventListener("change", () => {
+            selectedValue = select.value;
+        });
+        
+        searchInput.addEventListener("input", () => {
+            const query = searchInput.value.toLowerCase().trim();
+            
+            // Clear current options
+            select.innerHTML = "";
+            
+            // Filter and add matching options
+            allOptions.forEach(opt => {
+                if (opt.disabled || opt.text.toLowerCase().includes(query)) {
+                    const option = document.createElement("option");
+                    option.value = opt.value;
+                    option.textContent = opt.text;
+                    if (opt.disabled) {
+                        option.disabled = true;
+                        if (!query && !selectedValue) option.selected = true;
+                    }
+                    // Preserve previously selected value
+                    if (opt.value === selectedValue) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                }
+            });
+            
+            // If selected value is not in filtered list, check if only one match
+            const validOptions = Array.from(select.options).filter(o => !o.disabled);
+            const hasSelectedInList = validOptions.some(o => o.value === selectedValue);
+            
+            if (!hasSelectedInList && validOptions.length === 1) {
+                validOptions[0].selected = true;
+                selectedValue = validOptions[0].value;
+            }
+        });
+    });
+
+    // Bulk operations: Select all and count selected
+    document.addEventListener("DOMContentLoaded", () => {
+        const selectAll = document.getElementById("selectAllResidents");
+        const checkboxes = document.querySelectorAll(".resident-checkbox");
+        const selectedCount = document.getElementById("selectedCount");
+        
+        function updateCount() {
+            const count = document.querySelectorAll(".resident-checkbox:checked").length;
+            if (selectedCount) {
+                selectedCount.textContent = count + " selected";
+            }
+        }
+        
+        if (selectAll) {
+            selectAll.addEventListener("change", () => {
+                checkboxes.forEach(cb => cb.checked = selectAll.checked);
+                updateCount();
+            });
+        }
+        
+        checkboxes.forEach(cb => {
+            cb.addEventListener("change", updateCount);
+        });
+    });
+
+    // Remarks Modal handling
+    document.addEventListener("DOMContentLoaded", () => {
+        const remarksModal = document.getElementById("remarksModal");
+        const closeRemarksModal = document.getElementById("closeRemarksModal");
+        const cancelRemarksModal = document.getElementById("cancelRemarksModal");
+        const saveRemarksBtn = document.getElementById("saveRemarksBtn");
+        const remarksVehicleId = document.getElementById("remarksVehicleId");
+        const remarksPlateNumber = document.getElementById("remarksPlateNumber");
+        const remarksText = document.getElementById("remarksText");
+        const remarksStatus = document.getElementById("remarksStatus");
+        const openButtons = document.querySelectorAll(".open-remarks-modal");
+
+        function showRemarksModal() {
+            if (remarksModal) {
+                remarksModal.classList.remove("hidden");
+                remarksModal.classList.add("flex");
+            }
+        }
+
+        function hideRemarksModal() {
+            if (remarksModal) {
+                remarksModal.classList.add("hidden");
+                remarksModal.classList.remove("flex");
+            }
+            remarksStatus.textContent = "";
+        }
+
+        openButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                const vehicleId = btn.dataset.vehicleId;
+                const plateNumber = btn.dataset.plateNumber;
+                const remarks = btn.dataset.remarks;
+
+                remarksVehicleId.value = vehicleId;
+                remarksPlateNumber.textContent = plateNumber;
+                remarksText.value = remarks;
+                remarksStatus.textContent = "";
+                showRemarksModal();
+            });
+        });
+
+        if (closeRemarksModal) closeRemarksModal.addEventListener("click", hideRemarksModal);
+        if (cancelRemarksModal) cancelRemarksModal.addEventListener("click", hideRemarksModal);
+
+        if (saveRemarksBtn) {
+            saveRemarksBtn.addEventListener("click", async () => {
+                const vehicleId = remarksVehicleId.value;
+                const remarks = remarksText.value.trim();
+                remarksStatus.textContent = "Saving...";
+                remarksStatus.className = "mt-2 text-sm text-center text-blue-600";
+
+                try {
+                    const resp = await fetch("{% url 'residents:update_vehicle_remarks' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCsrfToken(),
+                        },
+                        body: JSON.stringify({ vehicle_id: vehicleId, remarks: remarks }),
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        remarksStatus.textContent = "Saved!";
+                        remarksStatus.className = "mt-2 text-sm text-center text-green-600";
+                        // Update the button's data-remarks and icon color
+                        const btn = document.querySelector(`.open-remarks-modal[data-vehicle-id="${vehicleId}"]`);
+                        if (btn) {
+                            btn.dataset.remarks = remarks;
+                            btn.title = remarks || "Add remarks";
+                            const svg = btn.querySelector("svg");
+                            if (svg) {
+                                if (remarks) {
+                                    svg.classList.remove("text-gray-400");
+                                    svg.classList.add("text-green-600");
+                                } else {
+                                    svg.classList.remove("text-green-600");
+                                    svg.classList.add("text-gray-400");
+                                }
+                            }
+                        }
+                        setTimeout(hideRemarksModal, 1000);
+                    } else {
+                        remarksStatus.textContent = data.error || "Failed to save";
+                        remarksStatus.className = "mt-2 text-sm text-center text-red-600";
+                    }
+                } catch (e) {
+                    remarksStatus.textContent = "Error saving remarks";
+                    remarksStatus.className = "mt-2 text-sm text-center text-red-600";
+                }
+            });
+        }
+
+        // Sync Vehicle to Camera
+        const syncButtons = document.querySelectorAll(".sync-vehicle-btn");
+        syncButtons.forEach((btn) => {
+            btn.addEventListener("click", async () => {
+                const vehicleId = btn.dataset.vehicleId;
+                const plateNumber = btn.dataset.plateNumber;
+                const svg = btn.querySelector("svg");
+                
+                // Show loading state
+                if (svg) {
+                    svg.classList.remove("text-green-600", "text-orange-500");
+                    svg.classList.add("text-blue-500", "animate-spin");
+                }
+                btn.disabled = true;
+                
+                try {
+                    const resp = await fetch("{% url 'residents:sync_vehicle_to_camera' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCsrfToken(),
+                        },
+                        body: JSON.stringify({ vehicle_id: vehicleId }),
+                    });
+                    const data = await resp.json();
+                    
+                    if (svg) {
+                        svg.classList.remove("animate-spin", "text-blue-500");
+                    }
+                    
+                    if (data.success) {
+                        if (svg) {
+                            svg.classList.add("text-green-600");
+                        }
+                        btn.title = "Synced - Click to resync";
+                        alert(`Vehicle ${plateNumber} synced to camera successfully!`);
+                    } else {
+                        if (svg) {
+                            svg.classList.add("text-orange-500");
+                        }
+                        alert(`Failed to sync ${plateNumber}: ${data.error || "Unknown error"}`);
+                    }
+                } catch (e) {
+                    if (svg) {
+                        svg.classList.remove("animate-spin", "text-blue-500");
+                        svg.classList.add("text-red-600");
+                    }
+                    alert(`Error syncing ${plateNumber}: ${e.message}`);
+                }
+                
+                btn.disabled = false;
+            });
+        });
+    });
+
+    // Sync All vehicles button handler
+    document.addEventListener("DOMContentLoaded", () => {
+        const syncAllBtn = document.getElementById("syncAllBtn");
+        if (!syncAllBtn) return;
+        
+        syncAllBtn.addEventListener("click", async () => {
+            const icon = document.getElementById("syncAllIcon");
+            const text = document.getElementById("syncAllText");
+            const notSyncedCount = document.getElementById("notSyncedCount");
+            const syncedCount = document.querySelector(".text-teal-600");
+            
+            if (!confirm("Are you sure you want to sync all unsynced vehicles to the camera?")) {
+                return;
+            }
+            
+            syncAllBtn.disabled = true;
+            if (icon) icon.classList.add("animate-spin");
+            if (text) text.textContent = "Syncing...";
+            
+            try {
+                const resp = await fetch("{% url 'residents:sync_all_vehicles_to_camera' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCsrfToken(),
+                    },
+                    body: JSON.stringify({}),
+                });
+                const data = await resp.json();
+                
+                if (icon) icon.classList.remove("animate-spin");
+                
+                if (data.success) {
+                    if (text) text.textContent = "Done!";
+                    if (data.stats) {
+                        if (syncedCount) syncedCount.textContent = data.stats.synced_vehicles;
+                        if (notSyncedCount) notSyncedCount.textContent = data.stats.not_synced_vehicles;
+                    }
+                    alert(`Successfully synced ${data.synced_count} vehicles to camera!`);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    if (text) text.textContent = "Failed";
+                    alert(`Sync failed: ${data.error || "Unknown error"}`);
+                }
+            } catch (e) {
+                if (icon) icon.classList.remove("animate-spin");
+                if (text) text.textContent = "Error";
+                alert(`Error during sync: ${e.message}`);
+            }
+            
+            syncAllBtn.disabled = false;
+        });
+    });
 </script>
 {% endblock %}

@@ -95,6 +95,57 @@ class HikvisionTerminalManager:
             logger.exception("UserInfo Record (JSON+rights) exception: %s", e)
             return None
 
+    def delete_user(self, employee_no: str) -> bool:
+        """
+        Delete a user (and linked face/PIN) from the terminal.
+        PUT /ISAPI/AccessControl/UserInfo/Delete?format=json
+        """
+        try:
+            url = f"{self.base_url}/ISAPI/AccessControl/UserInfo/Delete?format=json"
+            body = {"UserInfoDelCond": {"EmployeeNoList": [{"employeeNo": str(employee_no)}]}}
+            logger.info("PUT %s (UserInfo Delete)", url)
+            r = requests.put(url, json=body, auth=self.auth, timeout=self.config.timeout_seconds or 15, verify=False)
+            r.raise_for_status()
+            return True
+        except requests.HTTPError as e:
+            msg = e.response.text if getattr(e, 'response', None) is not None else str(e)
+            logger.exception("UserInfo Delete failed: %s", msg)
+            return False
+        except Exception as e:
+            logger.exception("UserInfo Delete exception: %s", e)
+            return False
+
+    def enable_face_access(self, employee_no: str) -> bool:
+        """
+        Make sure an existing user can open the door with their face:
+        re-apply door rights and a face-capable verify mode.
+        PUT /ISAPI/AccessControl/UserInfo/Modify?format=json
+        """
+        door_no = getattr(self.config, 'default_door_number', None) or 1
+        try:
+            url = f"{self.base_url}/ISAPI/AccessControl/UserInfo/Modify?format=json"
+            body = {
+                "UserInfo": {
+                    "employeeNo": str(employee_no),
+                    "userVerifyMode": "cardOrFace",
+                    "doorRight": str(door_no),
+                    "RightPlan": [
+                        {"doorNo": door_no, "planTemplateNo": "1"}
+                    ],
+                }
+            }
+            logger.info("PUT %s (enable face access)", url)
+            r = requests.put(url, json=body, auth=self.auth, timeout=self.config.timeout_seconds or 15, verify=False)
+            r.raise_for_status()
+            return True
+        except requests.HTTPError as e:
+            msg = e.response.text if getattr(e, 'response', None) is not None else str(e)
+            logger.exception("UserInfo Modify (enable face access) failed: %s", msg)
+            return False
+        except Exception as e:
+            logger.exception("UserInfo Modify (enable face access) exception: %s", e)
+            return False
+
     def _preprocess_face_image(self, image_content: bytes) -> Optional[bytes]:
         """
         Verify face presence and crop/resize to improve compatibility.

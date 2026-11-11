@@ -29,12 +29,26 @@
                     <span class="text-gray-600 dark:text-gray-400">Full Name</span>
                     <span class="font-semibold text-gray-900 dark:text-white">{{ visitor.full_name }}</span>
                 </div>
-                <div class="flex justify-between items-center py-2">
+                <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
                     <span class="text-gray-600 dark:text-gray-400">Pass Number</span>
                     <span class="font-semibold text-gray-900 dark:text-white">{{ visitor.pass_number }}</span>
                 </div>
+                {% if visitor.access_pin %}
+                <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-600 dark:text-gray-400">PIN</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ visitor.access_pin }}</span>
+                </div>
+                {% endif %}
+                <div class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                    <span class="text-gray-600 dark:text-gray-400">Validity</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">{{ visitor.check_in_time }} — {{ visitor.check_out_time }}</span>
+                </div>
+                <div class="flex justify-between items-center py-2">
+                    <span class="text-gray-600 dark:text-gray-400">Terminal Provisioning</span>
+                    <span class="font-semibold text-gray-900 dark:text-white">{% if provisioned %}<span class="text-green-600 dark:text-green-400">Provisioned</span>{% else %}<span class="text-gray-500 dark:text-gray-400">Pending/Failed</span>{% endif %}</span>
+                </div>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">Take a screenshot and keep it for the checkout process.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">Use your face at the terminal and PIN as the second factor. Take a screenshot and keep this Pass and PIN for the validity period (24 hours) and the checkout process.</p>
         {% endif %}
     </div>
 </div>

@@ -32,6 +32,11 @@
                     <input type="tel" id="phone" name="phone" required 
                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
+                <div>
+                    <label for="ic_last_digits" class="block text-sm font-medium mb-2">{% trans "IC Last 4 Digits" %}</label>
+                    <input type="text" id="ic_last_digits" name="ic_last_digits" maxlength="4"
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -74,44 +79,26 @@
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {% if address_config and address_config.enable_tower %}
                 <div>
-                    <label for="tower" class="block text-sm font-medium mb-2">{{ address_config.tower_label|default:"Tower" }}</label>
-                    <select id="tower" name="tower"
-                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="">{% trans "Select Tower" %}</option>
-                        {% for t in address_config.tower_options %}
-                            <option value="{{ t }}">{{ t }}</option>
-                        {% endfor %}
-                    </select>
+                    <label for="tower" class="block text-sm font-medium mb-2">{% trans "Tower" %}</label>
+                    <input type="text" id="tower" name="tower" 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="{% trans 'Enter tower (optional)' %}">
                 </div>
-                {% endif %}
                 
-                {% if address_config and address_config.enable_level %}
                 <div>
-                    <label for="level" class="block text-sm font-medium mb-2">{{ address_config.level_label|default:"Level" }}</label>
-                    <select id="level" name="level"
-                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="">{% trans "Select Level" %}</option>
-                        {% for lv in address_config.level_options %}
-                            <option value="{{ lv }}">{{ lv }}</option>
-                        {% endfor %}
-                    </select>
+                    <label for="level" class="block text-sm font-medium mb-2">{% trans "Level" %}</label>
+                    <input type="text" id="level" name="level" 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="{% trans 'Enter level (optional)' %}">
                 </div>
-                {% endif %}
                 
-                {% if address_config and address_config.enable_unit %}
                 <div>
-                    <label for="unit" class="block text-sm font-medium mb-2">{{ address_config.unit_label|default:"Unit" }}</label>
-                    <select id="unit" name="unit"
-                            class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="">{% trans "Select Unit" %}</option>
-                        {% for u in address_config.unit_options %}
-                            <option value="{{ u }}">{{ u }}</option>
-                        {% endfor %}
-                    </select>
+                    <label for="unit" class="block text-sm font-medium mb-2">{% trans "Unit" %}</label>
+                    <input type="text" id="unit" name="unit" 
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="{% trans 'Enter unit (optional)' %}">
                 </div>
-                {% endif %}
             </div>
             
             <div class="flex justify-end space-x-4">
@@ -186,7 +173,6 @@
                         </div>
                         
                         <div class="flex space-x-2 ml-4">
-                            <!-- View Registration Link -->
                             <a href="{% url 'visitors:pre_register_form' pre_reg.unique_link %}" target="_blank" 
                                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" 
                                title="{% trans 'View Registration Link' %}">
@@ -194,17 +180,6 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M7 7l10 10M17 7v4m0 0h-4"></path>
                                 </svg>
                             </a>
-                            
-                            <!-- Copy Registration Link -->
-                            <button type="button"
-                                    onclick="copyPreRegLink('{{ pre_reg.pre_reg_link|escapejs }}')"
-                                    class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
-                                    title="{% trans 'Copy Registration Link' %}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 12h8a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2v-6a2 2 0 012-2z"></path>
-                                </svg>
-                            </button>
-                            
                             {% if pre_reg.qr_code %}
                             <a href="{{ pre_reg.qr_code.url }}" target="_blank" 
                                class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300" 
@@ -233,36 +208,39 @@
 </div>
 {% endblock %}
 
+{% block extra_js %}
 <script>
-function copyPreRegLink(link) {
-    if (!link) return;
-    try {
-        navigator.clipboard.writeText(link)
-            .then(() => showCopyToast('Link copied to clipboard'))
-            .catch(() => fallbackCopy(link));
-    } catch (e) {
-        fallbackCopy(link);
+// --- Auto-fill on Pre-Register using public lookup ---
+function debounce(fn, delay=300){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), delay); }; }
+function setSelectValueById(selectEl, id){ if (!selectEl) return; if (id){ selectEl.value = String(id); } }
+async function doLookupPublic(){
+  const phoneEl = document.querySelector('input[name="phone"]');
+  const icEl = document.querySelector('input[name="ic_last_digits"]');
+  const nameEl = document.querySelector('input[name="full_name"]');
+  const companyEl = document.querySelector('input[name="company"]');
+  const categoryEl = document.querySelector('select[name="category"]');
+  const phone = (phoneEl?.value||'').trim();
+  const ic = (icEl?.value||'').trim();
+  if (!phone && !ic) return;
+  try {
+    const q = new URLSearchParams({ phone, ic });
+    const resp = await fetch(`/visitors/api/lookup-public/?${q.toString()}`);
+    const data = await resp.json();
+    if (data && data.success && data.found){
+      const v = data.data || {};
+      if (nameEl && v.full_name) nameEl.value = v.full_name;
+      if (companyEl && v.company) companyEl.value = v.company;
+      if (categoryEl) setSelectValueById(categoryEl, v.category_id);
+      // Do NOT touch purpose/tower/level/unit
     }
+  } catch(e){ /* silent */ }
 }
-
-function fallbackCopy(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    showCopyToast('Link copied');
-}
-
-function showCopyToast(message) {
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    toast.className = 'fixed top-4 right-4 px-3 py-2 rounded-lg text-sm bg-black/70 text-white shadow-lg z-50';
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.classList.add('opacity-0');
-        setTimeout(() => toast.remove(), 300);
-    }, 1200);
-}
+document.addEventListener('DOMContentLoaded', () => {
+  const phoneEl = document.querySelector('input[name="phone"]');
+  const icEl = document.querySelector('input[name="ic_last_digits"]');
+  const handler = debounce(doLookupPublic, 300);
+  if (phoneEl) phoneEl.addEventListener('input', handler);
+  if (icEl) icEl.addEventListener('input', handler);
+});
 </script>
+{% endblock %}

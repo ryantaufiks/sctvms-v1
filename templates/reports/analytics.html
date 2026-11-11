@@ -624,8 +624,26 @@ new Chart(vehicleTrendCtx, {
 // Export functions
 function exportData(format) {
     const params = new URLSearchParams(window.location.search);
-    params.set('export', format);
-    window.open(`${window.location.pathname}?${params.toString()}`, '_blank');
+    // Remove legacy export param construction; we will route to dedicated endpoints
+    params.delete('export');
+
+    let baseUrl = '';
+    switch (format) {
+        case 'csv':
+            baseUrl = "{% url 'reports:export_csv' %}";
+            break;
+        case 'excel':
+            baseUrl = "{% url 'reports:export_excel' %}";
+            break;
+        case 'pdf':
+            baseUrl = "{% url 'reports:export_pdf' %}";
+            break;
+        default:
+            baseUrl = "{% url 'reports:export_csv' %}";
+    }
+    const qs = params.toString();
+    const url = qs ? `${baseUrl}?${qs}` : baseUrl;
+    window.open(url, '_blank');
 }
 
 // Analytics Type Toggle Functionality

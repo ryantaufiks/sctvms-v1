@@ -61,7 +61,7 @@
             </div>
 
             <!-- Advanced Filters Row -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <!-- Date Range -->
                 <div>
                     <label class="block text-sm font-medium mb-1">{% trans "From Date" %}</label>
@@ -97,16 +97,6 @@
                     </select>
                 </div>
 
-                <!-- Overtime Filter -->
-                <div>
-                    <label class="block text-sm font-medium mb-1">{% trans "Overtime Status" %}</label>
-                    <select name="overtime" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="">{% trans "No Filter" %}</option>
-                        <option value="all_overtime" {% if filters.overtime == 'all_overtime' %}selected{% endif %}>{% trans "All Overtime (After Midnight)" %}</option>
-                        <option value="overtime_only" {% if filters.overtime == 'overtime_only' %}selected{% endif %}>{% trans "Overtime Delivery Only" %}</option>
-                    </select>
-                </div>
-
                 <!-- Action Buttons -->
                 <div class="flex items-end space-x-2">
                     <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -125,7 +115,7 @@
         <div class="flex justify-between items-center mb-4">
             <div class="flex items-center space-x-4">
                 <span class="text-lg font-semibold">{% trans "Results" %}: <span class="text-blue-600 dark:text-blue-400">{{ total_count }}</span> {% trans "visitors found" %}</span>
-                {% if filters.search or filters.category or filters.status or filters.date_from or filters.date_to or filters.overtime %}
+                {% if filters.search or filters.category or filters.status or filters.date_from or filters.date_to %}
                 <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm">
                     {% trans "Filtered" %}
                 </span>
@@ -1212,9 +1202,8 @@ function exportData(format) {
 
 // Auto-refresh functionality
 setInterval(() => {
-    const editModal = document.getElementById('editModal');
-    const isModalOpen = editModal && !editModal.classList.contains('hidden');
-    if (!window.location.search && !isModalOpen) {
+    // Auto-refresh every 30 seconds if no filters are applied
+    if (!window.location.search) {
         location.reload();
     }
 }, 30000);

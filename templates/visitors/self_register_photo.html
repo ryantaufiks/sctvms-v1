@@ -7,26 +7,32 @@
 <div class="login-container p-4">
   <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow p-6">
     <div class="text-center mb-6">
-      <img src="/media/logos/sctlogo-white.png" alt="SmartCity" class="h-10 mx-auto mb-3" />
       <h1 class="text-2xl font-bold">Capture Face Photo</h1>
       <p class="text-gray-600 dark:text-gray-400">Photo size must be under 200 KB.</p>
       <p class="text-sm text-gray-500 dark:text-gray-400">Pass Number: <strong>{{ pass_number }}</strong></p>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-2">Camera</label>
-      <video id="video" autoplay playsinline class="w-full rounded-lg bg-black"></video>
-      <div class="mt-3 grid grid-cols-2 gap-3">
-        <button type="button" id="startCam" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Start Camera</button>
-        <button type="button" id="capture" class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Capture</button>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+      <div>
+        <label class="block text-sm font-medium mb-2">Camera</label>
+        <video id="video" autoplay playsinline class="w-full rounded-lg bg-black"></video>
+        <div class="mt-3 flex gap-3">
+          <button type="button" id="startCam" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Start Camera</button>
+          <button type="button" id="capture" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Capture</button>
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Ensure your face is clear and centered in the frame.</p>
       </div>
-      <p id="capture-status" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></p>
-      <div class="mt-4 w-full flex justify-center">
-        <button type="button" id="upload" class="w-full max-w-sm px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Upload</button>
+      <div>
+        <label class="block text-sm font-medium mb-2">Preview</label>
+        <canvas id="canvas" class="w-full rounded-lg bg-black"></canvas>
+        <img id="validatedPreview" class="w-full rounded-lg mt-3 hidden" alt="Validated preview" />
+        <div class="mt-3 flex gap-3">
+          <button type="button" id="validate" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Validate</button>
+          <button type="button" id="upload" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Upload</button>
+          <button type="button" id="retake" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Retake</button>
+        </div>
+        <p id="size-info" class="text-xs mt-2"></p>
       </div>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Ensure your face is clear and centered in the frame.</p>
-      <!-- Hidden canvas used internally for capture/compression -->
-      <canvas id="canvas" class="hidden"></canvas>
     </div>
   </div>
 </div>
@@ -36,9 +42,11 @@ const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const startCam = document.getElementById('startCam');
 const captureBtn = document.getElementById('capture');
+const validateBtn = document.getElementById('validate');
 const uploadBtn = document.getElementById('upload');
-const captureStatus = document.getElementById('capture-status');
-// No preview/retake UI; keep it simple
+const retakeBtn = document.getElementById('retake');
+const sizeInfo = document.getElementById('size-info');
+const validatedImg = document.getElementById('validatedPreview');
 let stream;
 let lastDataUrl = null;
 
@@ -68,17 +76,38 @@ function compressToUnder200KB() {
     sizeKB = Math.round((dataUrl.length * 3 / 4) / 1024);
   }
   lastDataUrl = dataUrl;
-  return sizeKB;
+  sizeInfo.textContent = 'Size: ' + sizeKB + ' KB';
 }
 
-captureBtn.addEventListener('click', async () => {
+captureBtn.addEventListener('click', () => {
   if (!stream) { alert('Start the camera first'); return; }
-  if (!video.videoWidth || !video.videoHeight) {
-    await new Promise(r => setTimeout(r, 200));
-  }
-  const sizeKB = compressToUnder200KB();
-  if (captureStatus) {
-    captureStatus.textContent = 'Captured ✓ Size ~ ' + sizeKB + ' KB';
+  compressToUnder200KB();
+});
+
+retakeBtn.addEventListener('click', () => {
+  lastDataUrl = null;
+  sizeInfo.textContent = '';
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  validatedImg.src = '';
+  validatedImg.classList.add('hidden');
+});
+
+validateBtn.addEventListener('click', async () => {
+  if (!lastDataUrl) { alert('Capture a photo first'); return; }
+  const formData = new FormData();
+  formData.append('face_image_data', lastDataUrl);
+  try {
+    const resp = await fetch('{% url "visitors:validate_photo_api" %}', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (resp.ok && data.status === 'success' && data.preview_data) {
+      validatedImg.src = data.preview_data;
+      validatedImg.classList.remove('hidden');
+    } else {
+      alert('Validation failed: ' + (data.message || resp.status));
+    }
+  } catch (e) {
+    alert('Network error during validation: ' + (e && e.message ? e.message : e));
   }
 });
 

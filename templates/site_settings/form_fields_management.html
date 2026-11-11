@@ -75,6 +75,128 @@
                 </div>
             </div>
 
+            <!-- Print Slip Format Selection -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Print Slip Format</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Select which print slip format to use for visitor passes.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="flex items-center p-4 rounded-lg border {% if config.print_slip_format == '0' or not config.print_slip_format %}bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700{% else %}bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700{% endif %}">
+                        <input type="radio" name="print_slip_format" id="print_slip_0" value="0"
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                               {% if config.print_slip_format == '0' or not config.print_slip_format %}checked{% endif %}>
+                        <label for="print_slip_0" class="ml-3 block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Full Pass with QR (Default)</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Full visitor pass with QR code</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center p-4 rounded-lg border {% if config.print_slip_format == '1' %}bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700{% else %}bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700{% endif %}">
+                        <input type="radio" name="print_slip_format" id="print_slip_1" value="1"
+                               class="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300"
+                               {% if config.print_slip_format == '1' %}checked{% endif %}>
+                        <label for="print_slip_1" class="ml-3 block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Print Slip 1 (Compact)</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Standard compact parking slip format</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center p-4 rounded-lg border {% if config.print_slip_format == '2' %}bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700{% else %}bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700{% endif %}">
+                        <input type="radio" name="print_slip_format" id="print_slip_2" value="2"
+                               class="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300"
+                               {% if config.print_slip_format == '2' %}checked{% endif %}>
+                        <label for="print_slip_2" class="ml-3 block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Print Slip 2 (EU Habitat)</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">EU Habitat style compact slip format</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Door/Gate Control Settings -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Dashboard Button Controls</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Configure which control buttons are visible on the dashboard for all users.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="flex items-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <input type="checkbox" name="enable_side_door_button" id="enable_side_door_button" 
+                               class="h-5 w-5 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                               {% if config.enable_side_door_button %}checked{% endif %}>
+                        <label for="enable_side_door_button" class="ml-3 block">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Enable Side Door Button</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Show "Open Side Door" button on dashboard</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <input type="checkbox" name="enable_gate_button" id="enable_gate_button" 
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                               {% if config.enable_gate_button %}checked{% endif %}>
+                        <label for="enable_gate_button" class="ml-3 block">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Enable Gate Button</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Show "Open Gate" button on dashboard for all users</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Automatic Gate Control -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Automatic Gate Control</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Configure automatic gate opening behavior when visitors check in.</p>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <input type="checkbox" name="enable_auto_gate_on_checkin" id="enable_auto_gate_on_checkin" 
+                               class="h-5 w-5 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                               {% if config.enable_auto_gate_on_checkin %}checked{% endif %}>
+                        <label for="enable_auto_gate_on_checkin" class="ml-3 block">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Enable Auto Gate on Check-in</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Automatically open the gate after a visitor checks in and their plate is whitelisted on the ALPR camera</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CSS Mode Selection -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">CSS Theme Mode</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Choose between CDN (requires internet) or Local CSS (works offline).</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="flex items-center p-4 rounded-lg border {% if not config.use_local_css %}bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700{% else %}bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700{% endif %}">
+                        <input type="radio" name="use_local_css" id="css_cdn" value="false"
+                               class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
+                               {% if not config.use_local_css %}checked{% endif %}>
+                        <label for="css_cdn" class="ml-3 block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">CDN Mode (Default)</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Rich visual effects, requires stable internet</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center p-4 rounded-lg border {% if config.use_local_css %}bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700{% else %}bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700{% endif %}">
+                        <input type="radio" name="use_local_css" id="css_local" value="true"
+                               class="h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300"
+                               {% if config.use_local_css %}checked{% endif %}>
+                        <label for="css_local" class="ml-3 block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Local CSS Mode</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Flat, clean design - works offline/intranet</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Self Registration Settings -->
+            <div class="glassmorphism-card">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Self Registration Settings</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Configure features for visitor self-registration.</p>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 rounded-lg border bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700">
+                        <div>
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">Face Capture / Selfie</span>
+                            <span class="block text-xs text-gray-500 dark:text-gray-400">Enable face photo capture during self-registration for face recognition terminal</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="enable_face_capture" class="sr-only peer" {% if config.enable_face_capture %}checked{% endif %}>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Form Fields Configuration -->
             <div class="glassmorphism-card">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Visitor Form Fields</h2>
@@ -318,7 +440,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <!-- Tower Options -->
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Tower Options</h3>
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Tower Options</h3>
+                                <button type="button" onclick="toggleBulkMode('tower')" class="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                    Bulk Mode
+                                </button>
+                            </div>
                             <div class="space-y-2">
                                 <div class="flex items-center space-x-2">
                                     <input type="text" id="new_tower" placeholder="Add new tower" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -328,12 +455,31 @@
                                         </svg>
                                     </button>
                                 </div>
+                                <!-- Bulk Upload -->
+                                <div id="bulk_tower" class="hidden">
+                                    <textarea id="bulk_tower_input" rows="3" placeholder="Enter multiple values, one per line" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                                    <div class="flex space-x-2 mt-2">
+                                        <button type="button" onclick="bulkAdd('tower')" class="flex-1 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">Add All</button>
+                                        <button type="button" onclick="clearAll('tower')" class="flex-1 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors">Clear All</button>
+                                    </div>
+                                </div>
+                                <!-- Select All / Delete Selected -->
+                                <div id="tower_bulk_actions" class="hidden flex items-center justify-between text-xs">
+                                    <label class="flex items-center space-x-1 cursor-pointer">
+                                        <input type="checkbox" id="select_all_tower" onchange="toggleSelectAll('tower')" class="rounded">
+                                        <span class="text-gray-600 dark:text-gray-400">Select All</span>
+                                    </label>
+                                    <button type="button" onclick="deleteSelected('tower')" class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">Delete Selected</button>
+                                </div>
                                 <div id="tower_options" class="space-y-1 max-h-40 overflow-y-auto">
                                     {% if address_config.tower_options %}
                                         {% for tower in address_config.tower_options %}
-                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                                            <span class="text-sm">{{ tower }}</span>
-                                            <button type="button" onclick="removeOption('tower', '{{ tower }}')" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded option-item" data-value="{{ tower }}">
+                                            <div class="flex items-center space-x-2">
+                                                <input type="checkbox" class="tower-checkbox hidden rounded" value="{{ tower }}">
+                                                <span class="text-sm">{{ tower }}</span>
+                                            </div>
+                                            <button type="button" onclick="removeOption('tower', '{{ tower }}')" class="text-red-600 hover:text-red-800 dark:text-red-400 remove-btn">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                                 </svg>
@@ -349,7 +495,12 @@
 
                         <!-- Level Options -->
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Level Options</h3>
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Level Options</h3>
+                                <button type="button" onclick="toggleBulkMode('level')" class="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                    Bulk Mode
+                                </button>
+                            </div>
                             <div class="space-y-2">
                                 <div class="flex items-center space-x-2">
                                     <input type="text" id="new_level" placeholder="Add new level" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -359,12 +510,31 @@
                                         </svg>
                                     </button>
                                 </div>
+                                <!-- Bulk Upload -->
+                                <div id="bulk_level" class="hidden">
+                                    <textarea id="bulk_level_input" rows="3" placeholder="Enter multiple values, one per line" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                                    <div class="flex space-x-2 mt-2">
+                                        <button type="button" onclick="bulkAdd('level')" class="flex-1 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">Add All</button>
+                                        <button type="button" onclick="clearAll('level')" class="flex-1 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors">Clear All</button>
+                                    </div>
+                                </div>
+                                <!-- Select All / Delete Selected -->
+                                <div id="level_bulk_actions" class="hidden flex items-center justify-between text-xs">
+                                    <label class="flex items-center space-x-1 cursor-pointer">
+                                        <input type="checkbox" id="select_all_level" onchange="toggleSelectAll('level')" class="rounded">
+                                        <span class="text-gray-600 dark:text-gray-400">Select All</span>
+                                    </label>
+                                    <button type="button" onclick="deleteSelected('level')" class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">Delete Selected</button>
+                                </div>
                                 <div id="level_options" class="space-y-1 max-h-40 overflow-y-auto">
                                     {% if address_config.level_options %}
                                         {% for level in address_config.level_options %}
-                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                                            <span class="text-sm">{{ level }}</span>
-                                            <button type="button" onclick="removeOption('level', '{{ level }}')" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded option-item" data-value="{{ level }}">
+                                            <div class="flex items-center space-x-2">
+                                                <input type="checkbox" class="level-checkbox hidden rounded" value="{{ level }}">
+                                                <span class="text-sm">{{ level }}</span>
+                                            </div>
+                                            <button type="button" onclick="removeOption('level', '{{ level }}')" class="text-red-600 hover:text-red-800 dark:text-red-400 remove-btn">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                                 </svg>
@@ -380,7 +550,12 @@
 
                         <!-- Unit Options -->
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Unit Options</h3>
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Unit Options</h3>
+                                <button type="button" onclick="toggleBulkMode('unit')" class="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                    Bulk Mode
+                                </button>
+                            </div>
                             <div class="space-y-2">
                                 <div class="flex items-center space-x-2">
                                     <input type="text" id="new_unit" placeholder="Add new unit" class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -390,12 +565,31 @@
                                         </svg>
                                     </button>
                                 </div>
+                                <!-- Bulk Upload -->
+                                <div id="bulk_unit" class="hidden">
+                                    <textarea id="bulk_unit_input" rows="3" placeholder="Enter multiple values, one per line" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500 text-sm"></textarea>
+                                    <div class="flex space-x-2 mt-2">
+                                        <button type="button" onclick="bulkAdd('unit')" class="flex-1 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors">Add All</button>
+                                        <button type="button" onclick="clearAll('unit')" class="flex-1 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors">Clear All</button>
+                                    </div>
+                                </div>
+                                <!-- Select All / Delete Selected -->
+                                <div id="unit_bulk_actions" class="hidden flex items-center justify-between text-xs">
+                                    <label class="flex items-center space-x-1 cursor-pointer">
+                                        <input type="checkbox" id="select_all_unit" onchange="toggleSelectAll('unit')" class="rounded">
+                                        <span class="text-gray-600 dark:text-gray-400">Select All</span>
+                                    </label>
+                                    <button type="button" onclick="deleteSelected('unit')" class="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">Delete Selected</button>
+                                </div>
                                 <div id="unit_options" class="space-y-1 max-h-40 overflow-y-auto">
                                     {% if address_config.unit_options %}
                                         {% for unit in address_config.unit_options %}
-                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                                            <span class="text-sm">{{ unit }}</span>
-                                            <button type="button" onclick="removeOption('unit', '{{ unit }}')" class="text-red-600 hover:text-red-800 dark:text-red-400">
+                                        <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded option-item" data-value="{{ unit }}">
+                                            <div class="flex items-center space-x-2">
+                                                <input type="checkbox" class="unit-checkbox hidden rounded" value="{{ unit }}">
+                                                <span class="text-sm">{{ unit }}</span>
+                                            </div>
+                                            <button type="button" onclick="removeOption('unit', '{{ unit }}')" class="text-red-600 hover:text-red-800 dark:text-red-400 remove-btn">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                                 </svg>
@@ -571,6 +765,143 @@ function removeOption(fieldType, value) {
     .catch(error => {
         console.error('Error:', error);
         alert('Error removing option');
+    });
+}
+
+// Bulk mode state
+const bulkModeState = { tower: false, level: false, unit: false };
+
+function toggleBulkMode(fieldType) {
+    bulkModeState[fieldType] = !bulkModeState[fieldType];
+    const bulkDiv = document.getElementById(`bulk_${fieldType}`);
+    const bulkActionsDiv = document.getElementById(`${fieldType}_bulk_actions`);
+    const checkboxes = document.querySelectorAll(`.${fieldType}-checkbox`);
+    
+    if (bulkModeState[fieldType]) {
+        bulkDiv.classList.remove('hidden');
+        bulkActionsDiv.classList.remove('hidden');
+        checkboxes.forEach(cb => cb.classList.remove('hidden'));
+    } else {
+        bulkDiv.classList.add('hidden');
+        bulkActionsDiv.classList.add('hidden');
+        checkboxes.forEach(cb => {
+            cb.classList.add('hidden');
+            cb.checked = false;
+        });
+        document.getElementById(`select_all_${fieldType}`).checked = false;
+    }
+}
+
+function bulkAdd(fieldType) {
+    const textarea = document.getElementById(`bulk_${fieldType}_input`);
+    const values = textarea.value.split('\n').map(v => v.trim()).filter(v => v);
+    
+    if (values.length === 0) {
+        alert('Please enter at least one value');
+        return;
+    }
+    
+    fetch('{% url "site_settings:update_address_options" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            action: 'bulk_add',
+            field_type: fieldType,
+            values: values
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Added ${data.added_count} new option(s)`);
+            location.reload();
+        } else {
+            alert(data.error || 'Error adding options');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding options');
+    });
+}
+
+function clearAll(fieldType) {
+    if (!confirm(`Are you sure you want to remove ALL ${fieldType} options? This cannot be undone.`)) {
+        return;
+    }
+    
+    fetch('{% url "site_settings:update_address_options" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            action: 'clear_all',
+            field_type: fieldType,
+            value: 'all'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Error clearing options');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error clearing options');
+    });
+}
+
+function toggleSelectAll(fieldType) {
+    const selectAll = document.getElementById(`select_all_${fieldType}`);
+    const checkboxes = document.querySelectorAll(`.${fieldType}-checkbox`);
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+function deleteSelected(fieldType) {
+    const checkboxes = document.querySelectorAll(`.${fieldType}-checkbox:checked`);
+    const values = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (values.length === 0) {
+        alert('Please select at least one option to delete');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${values.length} selected option(s)?`)) {
+        return;
+    }
+    
+    fetch('{% url "site_settings:update_address_options" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            action: 'bulk_remove',
+            field_type: fieldType,
+            values: values
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Deleted ${data.removed_count} option(s)`);
+            location.reload();
+        } else {
+            alert(data.error || 'Error deleting options');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting options');
     });
 }
 </script>

@@ -7,9 +7,8 @@
 <div class="login-container p-4">
   <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow p-6">
     <div class="text-center mb-6">
-      <img src="/media/logos/sctlogo-white.png" alt="SmartCity" class="h-10 mx-auto mb-3" />
       <h1 class="text-2xl font-bold">Visitor Information</h1>
-      <p class="text-gray-600 dark:text-gray-400">Please fill in your details</p>
+      <p class="text-gray-600 dark:text-gray-400">Fill in your details first, photo in next step.</p>
     </div>
 
     <form method="post" class="space-y-6">
@@ -91,4 +90,41 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// --- Auto-fill fields on self_register_info using public lookup ---
+function debounce(fn, delay=300){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), delay); }; }
+function setSelectValueById(selectEl, id){ if (!selectEl) return; if (id){ selectEl.value = String(id); } }
+async function doLookupPublic(){
+  const phoneEl = document.querySelector('input[name="contact_number"]');
+  const icEl = document.querySelector('input[name="ic_last_digits"]');
+  const nameEl = document.querySelector('input[name="full_name"]');
+  const companyEl = document.querySelector('input[name="company"]');
+  const categoryEl = document.querySelector('select[name="category"]');
+  const phone = (phoneEl?.value||'').trim();
+  const ic = (icEl?.value||'').trim();
+  if (!phone && !ic) return;
+  try {
+    const q = new URLSearchParams({ phone, ic });
+    const resp = await fetch(`/visitors/api/lookup-public/?${q.toString()}`);
+    const data = await resp.json();
+    if (data && data.success && data.found){
+      const v = data.data || {};
+      if (nameEl && v.full_name) nameEl.value = v.full_name;
+      if (companyEl && v.company) companyEl.value = v.company;
+      if (categoryEl) setSelectValueById(categoryEl, v.category_id);
+      // Do NOT touch purpose/tower/level/unit
+    }
+  } catch(e){ /* silent */ }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const phoneEl = document.querySelector('input[name="contact_number"]');
+  const icEl = document.querySelector('input[name="ic_last_digits"]');
+  const handler = debounce(doLookupPublic, 300);
+  if (phoneEl) phoneEl.addEventListener('input', handler);
+  if (icEl) icEl.addEventListener('input', handler);
+});
+</script>
 {% endblock %}

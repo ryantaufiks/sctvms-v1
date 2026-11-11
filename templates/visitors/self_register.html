@@ -199,12 +199,12 @@ startCam.addEventListener('click', async () => {
     video.srcObject = stream;
     await video.play();
   } catch (e) {
-    alert('Tidak bisa membuka kamera: ' + (e && e.message ? e.message : e));
+    alert('Could not open camera: ' + (e && e.message ? e.message : e));
   }
 });
 
 captureBtn.addEventListener('click', () => {
-  if (!stream) { alert('Mulai kamera terlebih dahulu'); return; }
+  if (!stream) { alert('Please start the camera first'); return; }
   const w = video.videoWidth || 640;
   const h = video.videoHeight || 480;
   canvas.width = w; canvas.height = h;
@@ -212,6 +212,39 @@ captureBtn.addEventListener('click', () => {
   ctx.drawImage(video, 0, 0, w, h);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   faceInput.value = dataUrl;
+});
+
+// --- Auto-fill by phone/IC using public lookup ---
+function debounce(fn, delay=300){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), delay); }; }
+function setSelectValueById(selectEl, id){ if (!selectEl) return; if (id){ selectEl.value = String(id); } }
+async function doLookupPublic(){
+  const phoneEl = document.querySelector('input[name="contact_number"]');
+  const icEl = document.querySelector('input[name="ic_last_digits"]');
+  const nameEl = document.querySelector('input[name="full_name"]');
+  const companyEl = document.querySelector('input[name="company"]');
+  const categoryEl = document.querySelector('select[name="category"]');
+  const phone = (phoneEl?.value||'').trim();
+  const ic = (icEl?.value||'').trim();
+  if (!phone && !ic) return;
+  try {
+    const q = new URLSearchParams({ phone, ic });
+    const resp = await fetch(`/visitors/api/lookup-public/?${q.toString()}`);
+    const data = await resp.json();
+    if (data && data.success && data.found){
+      const v = data.data || {};
+      if (nameEl && v.full_name) nameEl.value = v.full_name;
+      if (companyEl && v.company) companyEl.value = v.company;
+      if (categoryEl) setSelectValueById(categoryEl, v.category_id);
+      // Do NOT touch purpose/tower/level/unit
+    }
+  } catch(e){ /* silent */ }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const phoneEl = document.querySelector('input[name="contact_number"]');
+  const icEl = document.querySelector('input[name="ic_last_digits"]');
+  const handler = debounce(doLookupPublic, 300);
+  if (phoneEl) phoneEl.addEventListener('input', handler);
+  if (icEl) icEl.addEventListener('input', handler);
 });
 </script>
 {% endblock %}

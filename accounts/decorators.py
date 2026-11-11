@@ -72,8 +72,8 @@ def staff_or_above_required(view_func):
 
             allowed = False
 
-            # Allow superusers explicitly
-            if getattr(user, 'is_superuser', False):
+            # Allow Django superuser or staff
+            if getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False):
                 allowed = True
 
             # Allow via explicit profile boolean helpers
@@ -83,7 +83,7 @@ def staff_or_above_required(view_func):
                 allowed = True
 
             # Fallback: allow via normalized role string
-            if role_value in {'admin', 'management', 'staff'}:
+            if role_value in {'admin', 'management', 'staff', 'super_admin', 'superadmin', 'super'}:
                 allowed = True
 
             # DEBUG LOGGING
@@ -166,11 +166,13 @@ def can_view_reports(view_func):
             if profile and (getattr(profile, 'is_admin', False)
                             or getattr(profile, 'is_management', False)
                             or getattr(profile, 'is_security_officer', False)
-                            or getattr(profile, 'is_staff', False)):
+                            or getattr(profile, 'is_staff', False)
+                            or getattr(profile, 'is_officer', False)):
                 allowed = True
 
             # Fallback: allow via normalized role string
-            if role_value in {'admin', 'management', 'security_officer', 'staff'}:
+            # Accept common synonyms like 'officer' to cover user setups
+            if role_value in {'admin', 'management', 'security_officer', 'staff', 'officer', 'security'}:
                 allowed = True
 
             # DEBUG LOGGING START

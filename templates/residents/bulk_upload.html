@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% block title %}Bulk Upload Vehicles{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="glassmorphism rounded-xl p-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">Bulk Upload Vehicles</h1>
+            <p class="text-gray-600 dark:text-gray-400">Upload CSV file to import resident vehicles in bulk</p>
+        </div>
+        <a
+            href="{% url 'residents:management' %}?tab=vehicle"
+            class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+        >
+            Back to Vehicles
+        </a>
+    </div>
+
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="glassmorphism rounded-xl p-4 {% if message.tags == 'error' %}border-l-4 border-red-500{% elif message.tags == 'success' %}border-l-4 border-green-500{% else %}border-l-4 border-blue-500{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if step == 'upload' %}
+    <!-- Step 1: Upload -->
+    <div class="glassmorphism rounded-xl p-6">
+        <h2 class="text-xl font-semibold mb-4">Step 1: Upload CSV File</h2>
+        
+        <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <h3 class="font-semibold text-blue-800 dark:text-blue-300 mb-2">CSV Format Requirements</h3>
+            <p class="text-sm text-blue-700 dark:text-blue-400 mb-2">Required columns:</p>
+            <ul class="list-disc list-inside text-sm text-blue-700 dark:text-blue-400 mb-3">
+                <li><strong>Plate No.</strong> - Vehicle plate number (required)</li>
+                <li><strong>Owner Name</strong> - Resident name (required)</li>
+            </ul>
+            <p class="text-sm text-blue-700 dark:text-blue-400 mb-2">Optional columns:</p>
+            <ul class="list-disc list-inside text-sm text-blue-700 dark:text-blue-400">
+                <li><strong>Phone</strong> - Contact number</li>
+                <li><strong>Email</strong> - Email address</li>
+                <li><strong>Tower</strong> - Block/Tower</li>
+                <li><strong>Level</strong> - Floor/Level</li>
+                <li><strong>Unit</strong> - Unit number</li>
+                <li><strong>Start Time</strong> - Validity start (YYYY-MM-DD)</li>
+                <li><strong>End Time</strong> - Validity end (YYYY-MM-DD)</li>
+                <li><strong>Remarks</strong> - Notes</li>
+            </ul>
+        </div>
+
+        <div class="mb-6">
+            <a 
+                href="{% url 'residents:bulk_upload_template' %}"
+                class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download Template
+            </a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="step" value="upload">
+            
+            <div>
+                <label class="block text-sm font-medium mb-2">Select CSV File</label>
+                <input 
+                    type="file" 
+                    name="csv_file" 
+                    accept=".csv"
+                    required
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/50 focus:ring-2 focus:ring-blue-500"
+                >
+            </div>
+
+            <button 
+                type="submit"
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+            >
+                Upload & Preview
+            </button>
+        </form>
+    </div>
+
+    {% elif step == 'preview' %}
+    <!-- Step 2: Preview -->
+    <div class="glassmorphism rounded-xl p-6">
+        <h2 class="text-xl font-semibold mb-4">Step 2: Review Import Preview</h2>
+        
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-gray-700 dark:text-gray-300">{{ total }}</div>
+                <div class="text-sm text-gray-500">Total Rows</div>
+            </div>
+            <div class="bg-green-100 dark:bg-green-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-700 dark:text-green-400">{{ valid }}</div>
+                <div class="text-sm text-green-600">Valid</div>
+            </div>
+            <div class="bg-red-100 dark:bg-red-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-red-700 dark:text-red-400">{{ invalid }}</div>
+                <div class="text-sm text-red-600">Errors (Skip)</div>
+            </div>
+            <div class="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-700 dark:text-blue-400">{{ create_count }}</div>
+                <div class="text-sm text-blue-600">New Residents</div>
+            </div>
+            <div class="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-purple-700 dark:text-purple-400">{{ add_count|add:update_count }}</div>
+                <div class="text-sm text-purple-600">Add/Update Vehicle</div>
+            </div>
+        </div>
+
+        <!-- Preview Table -->
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Row</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plate No.</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner Name</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tower/Level/Unit</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for row in rows %}
+                    <tr class="{% if row.status == 'error' %}bg-red-50 dark:bg-red-900/20{% endif %}">
+                        <td class="px-4 py-3 text-sm">{{ row.row_num }}</td>
+                        <td class="px-4 py-3 text-sm font-mono">{{ row.plate }}</td>
+                        <td class="px-4 py-3 text-sm">{{ row.owner_name }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if row.tower or row.level or row.unit %}
+                                {{ row.tower }}/{{ row.level }}/{{ row.unit }}
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if row.action == 'create_resident' %}
+                                <span class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 rounded text-xs">New Resident</span>
+                            {% elif row.action == 'add_vehicle' %}
+                                <span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 rounded text-xs">Add Vehicle</span>
+                                <div class="text-xs text-gray-500 mt-1">to {{ row.existing_resident_name }}</div>
+                            {% elif row.action == 'update_vehicle' %}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300 rounded text-xs">Update Vehicle</span>
+                                <div class="text-xs text-gray-500 mt-1">{{ row.existing_resident_name }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if row.status == 'error' %}
+                                <span class="text-red-600">
+                                    {% for err in row.errors %}{{ err }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                </span>
+                            {% else %}
+                                <span class="text-green-600">Ready</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">No data in CSV file</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Confirm Form -->
+        <form method="post" class="flex items-center gap-4">
+            {% csrf_token %}
+            <input type="hidden" name="step" value="confirm">
+            
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="sync_to_camera" checked class="rounded">
+                <span class="text-sm">Sync to Dahua Camera</span>
+            </label>
+
+            <div class="flex-grow"></div>
+
+            <a 
+                href="{% url 'residents:bulk_upload' %}"
+                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+            >
+                Cancel
+            </a>
+            <button 
+                type="submit"
+                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                {% if valid == 0 %}disabled{% endif %}
+            >
+                Import {{ valid }} Valid Row{% if valid != 1 %}s{% endif %}
+            </button>
+        </form>
+    </div>
+
+    {% elif step == 'results' %}
+    <!-- Step 3: Results -->
+    <div class="glassmorphism rounded-xl p-6">
+        <h2 class="text-xl font-semibold mb-4">Import Results</h2>
+        
+        <!-- Results Summary -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-100 dark:bg-blue-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-blue-700 dark:text-blue-400">{{ results.residents_created }}</div>
+                <div class="text-sm text-blue-600">Residents Created</div>
+            </div>
+            <div class="bg-green-100 dark:bg-green-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-green-700 dark:text-green-400">{{ results.vehicles_created }}</div>
+                <div class="text-sm text-green-600">Vehicles Created</div>
+            </div>
+            <div class="bg-yellow-100 dark:bg-yellow-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{{ results.vehicles_updated }}</div>
+                <div class="text-sm text-yellow-600">Vehicles Updated</div>
+            </div>
+            <div class="bg-purple-100 dark:bg-purple-900/30 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold text-purple-700 dark:text-purple-400">{{ results.sync_success }}</div>
+                <div class="text-sm text-purple-600">Camera Synced</div>
+            </div>
+        </div>
+
+        {% if results.skipped > 0 or results.sync_failed > 0 %}
+        <div class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+            <p class="text-yellow-800 dark:text-yellow-300">
+                <strong>Note:</strong> 
+                {% if results.skipped > 0 %}{{ results.skipped }} row(s) skipped due to errors.{% endif %}
+                {% if results.sync_failed > 0 %}{{ results.sync_failed }} vehicle(s) failed to sync to camera.{% endif %}
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Row Results Table -->
+        <div class="overflow-x-auto mb-6">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Row</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for row in results.row_results %}
+                    <tr class="{% if row.status == 'error' or row.status == 'skipped' %}bg-red-50 dark:bg-red-900/20{% elif row.status == 'success' %}bg-green-50 dark:bg-green-900/10{% endif %}">
+                        <td class="px-4 py-3 text-sm">{{ row.row_num }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if row.status == 'success' %}
+                                <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Success</span>
+                            {% elif row.status == 'skipped' %}
+                                <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">Skipped</span>
+                            {% else %}
+                                <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Error</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">{{ row.action|default:'-' }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if row.plate %}{{ row.plate }} - {{ row.resident }}{% endif %}
+                            {% if row.message %}{{ row.message }}{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex gap-4">
+            <a 
+                href="{% url 'residents:bulk_upload' %}"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+                Upload More
+            </a>
+            <a 
+                href="{% url 'residents:management' %}?tab=vehicle"
+                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            >
+                Go to Vehicle Report
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

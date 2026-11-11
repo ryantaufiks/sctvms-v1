@@ -24,17 +24,17 @@
                 <span class="text-xs px-2 py-1 rounded bg-white/60 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">{{ site.name }}</span>
             </div>
             <div class="flex items-center space-x-3">
-                {% if site_config and site_config.enable_door_control %}
-                <!-- Door Control Button -->
+                <!-- Door Control Button (controlled by site_config.enable_side_door_button, default True if no config) -->
+                {% if site_config.enable_side_door_button or not site_config %}
                 <button id="door-control-btn" onclick="openDoor()" class="flex items-center space-x-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
                     </svg>
-                    <span class="hidden sm:inline" data-translate="Open Door">Open Door</span>
+                    <span class="hidden sm:inline" data-translate="Open Side Door">Open Side Door</span>
                 </button>
                 {% endif %}
-                {% if site_config and site_config.enable_gate_control %}
-                <!-- Gate Control Button -->
+                <!-- Gate Control Button (controlled by site_config.enable_gate_button, default True if no config) -->
+                {% if site_config.enable_gate_button or not site_config %}
                 <button id="gate-control-btn" onclick="openGate()" class="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -78,9 +78,9 @@
                      </div>
                      <!-- Mini Chart -->
                       <div class="mt-4">
-                          <div class="flex items-end space-x-1 h-8">
-                              <div class="bg-blue-200 dark:bg-blue-800 rounded-sm" style="height: {% if visitors_yesterday > 0 %}{{ visitors_yesterday|add:2 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
-                              <div class="bg-blue-500 rounded-sm" style="height: {% if visitors_today > 0 %}{{ visitors_today|add:2 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                          <div class="flex items-end space-x-1 h-6">
+                              <div class="bg-blue-200 dark:bg-blue-800 rounded-sm" style="height: {% if visitors_yesterday > 0 %}min(100%, {{ visitors_yesterday|add:2 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
+                              <div class="bg-blue-500 rounded-sm" style="height: {% if visitors_today > 0 %}min(100%, {{ visitors_today|add:2 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
                           </div>
                           <div class="flex justify-between text-xs text-gray-500 mt-1">
                               <span>Yesterday: {{ visitors_yesterday }}</span>
@@ -117,9 +117,9 @@
                      </div>
                      <!-- Mini Chart -->
                      <div class="mt-4">
-                         <div class="flex items-end space-x-1 h-8">
-                             <div class="bg-green-200 dark:bg-green-800 rounded-sm" style="height: {% if contractors_yesterday > 0 %}{{ contractors_yesterday|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
-                             <div class="bg-green-500 rounded-sm" style="height: {% if contractors_today > 0 %}{{ contractors_today|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                         <div class="flex items-end space-x-1 h-6">
+                             <div class="bg-green-200 dark:bg-green-800 rounded-sm" style="height: {% if contractors_yesterday > 0 %}min(100%, {{ contractors_yesterday|add:1 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
+                             <div class="bg-green-500 rounded-sm" style="height: {% if contractors_today > 0 %}min(100%, {{ contractors_today|add:1 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
                          </div>
                          <div class="flex justify-between text-xs text-gray-500 mt-1">
                              <span>Yesterday: {{ contractors_yesterday }}</span>
@@ -155,9 +155,9 @@
                      </div>
                      <!-- Mini Chart -->
                      <div class="mt-4">
-                         <div class="flex items-end space-x-1 h-8">
-                             <div class="bg-yellow-200 dark:bg-yellow-800 rounded-sm" style="height: {% if deliveries_yesterday > 0 %}{{ deliveries_yesterday|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
-                             <div class="bg-yellow-500 rounded-sm" style="height: {% if deliveries_today > 0 %}{{ deliveries_today|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                         <div class="flex items-end space-x-1 h-6">
+                             <div class="bg-yellow-200 dark:bg-yellow-800 rounded-sm" style="height: {% if deliveries_yesterday > 0 %}min(100%, {{ deliveries_yesterday|add:1 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
+                             <div class="bg-yellow-500 rounded-sm" style="height: {% if deliveries_today > 0 %}min(100%, {{ deliveries_today|add:1 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
                          </div>
                          <div class="flex justify-between text-xs text-gray-500 mt-1">
                              <span>Yesterday: {{ deliveries_yesterday }}</span>
@@ -191,9 +191,9 @@
                      </div>
                      <!-- Mini Chart -->
                      <div class="mt-4">
-                         <div class="flex items-end space-x-1 h-8">
-                             <div class="bg-red-200 dark:bg-red-800 rounded-sm" style="height: {% if overtime_visitors_yesterday > 0 %}{{ overtime_visitors_yesterday|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
-                             <div class="bg-red-500 rounded-sm" style="height: {% if overtime_visitors > 0 %}{{ overtime_visitors|add:1 }}0%{% else %}15px{% endif %}; width: 8px;"></div>
+                         <div class="flex items-end space-x-1 h-6">
+                             <div class="bg-red-200 dark:bg-red-800 rounded-sm" style="height: {% if overtime_visitors_yesterday > 0 %}min(100%, {{ overtime_visitors_yesterday|add:1 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
+                             <div class="bg-red-500 rounded-sm" style="height: {% if overtime_visitors > 0 %}min(100%, {{ overtime_visitors|add:1 }}0%){% else %}10px{% endif %}; width: 8px;"></div>
                          </div>
                          <div class="flex justify-between text-xs text-gray-500 mt-1">
                              <span>Yesterday: {{ overtime_visitors_yesterday|default:0 }}</span>
@@ -205,7 +205,7 @@
             
             <!-- Mobile Swipeable Carousel -->
             <div class="md:hidden">
-                <div class="flex justify-between items-center mb-4">
+                    <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold">{% trans "Analytics" %}</h3>
                     <div class="flex space-x-1" id="carousel-indicators">
                         <div class="w-2 h-2 rounded-full bg-blue-500 indicator active" data-slide="0"></div>
@@ -248,8 +248,8 @@
                                 <!-- Mini Chart -->
                                 <div class="mt-3">
                                     <div class="flex items-end space-x-1 h-6">
-                                        <div class="bg-blue-200 dark:bg-blue-800 rounded-sm" style="height: {% if visitors_yesterday > 0 %}{% widthratio visitors_yesterday 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
-                                        <div class="bg-blue-500 rounded-sm" style="height: {% if visitors_today > 0 %}{% widthratio visitors_today 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-blue-200 dark:bg-blue-800 rounded-sm" style="height: {% if visitors_yesterday > 0 %}min(100%, {% widthratio visitors_yesterday 10 60 %}%){% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-blue-500 rounded-sm" style="height: {% if visitors_today > 0 %}min(100%, {% widthratio visitors_today 10 60 %}%){% else %}10px{% endif %}; width: 6px;"></div>
                                     </div>
                                     <div class="flex justify-between text-xs text-gray-500 mt-1">
                                         <span>Yesterday: {{ visitors_yesterday|default:0 }}</span>
@@ -291,8 +291,8 @@
                                 <!-- Mini Chart -->
                                 <div class="mt-3">
                                     <div class="flex items-end space-x-1 h-6">
-                                        <div class="bg-green-200 dark:bg-green-800 rounded-sm" style="height: {% if contractors_yesterday > 0 %}{% widthratio contractors_yesterday 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
-                                        <div class="bg-green-500 rounded-sm" style="height: {% if contractors_today > 0 %}{% widthratio contractors_today 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-green-200 dark:bg-green-800 rounded-sm" style="height: {% if contractors_yesterday > 0 %}min(100%, {% widthratio contractors_yesterday 10 60 %}%){% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-green-500 rounded-sm" style="height: {% if contractors_today > 0 %}min(100%, {% widthratio contractors_today 10 60 %}%){% else %}10px{% endif %}; width: 6px;"></div>
                                     </div>
                                     <div class="flex justify-between text-xs text-gray-500 mt-1">
                                         <span>Yesterday: {{ contractors_yesterday|default:0 }}</span>
@@ -333,8 +333,8 @@
                                 <!-- Mini Chart -->
                                 <div class="mt-3">
                                     <div class="flex items-end space-x-1 h-6">
-                                        <div class="bg-yellow-200 dark:bg-yellow-800 rounded-sm" style="height: {% if deliveries_yesterday > 0 %}{% widthratio deliveries_yesterday 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
-                                        <div class="bg-yellow-500 rounded-sm" style="height: {% if deliveries_today > 0 %}{% widthratio deliveries_today 10 60 %}%{% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-yellow-200 dark:bg-yellow-800 rounded-sm" style="height: {% if deliveries_yesterday > 0 %}min(100%, {% widthratio deliveries_yesterday 10 60 %}%){% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-yellow-500 rounded-sm" style="height: {% if deliveries_today > 0 %}min(100%, {% widthratio deliveries_today 10 60 %}%){% else %}10px{% endif %}; width: 6px;"></div>
                                     </div>
                                     <div class="flex justify-between text-xs text-gray-500 mt-1">
                                         <span>Yesterday: {{ deliveries_yesterday|default:0 }}</span>
@@ -372,8 +372,8 @@
                                 <!-- Mini Chart -->
                                 <div class="mt-3">
                                     <div class="flex items-end space-x-1 h-6">
-                                        <div class="bg-red-200 dark:bg-red-800 rounded-sm" style="height: {% if overtime_visitors_yesterday > 0 %}{{ overtime_visitors_yesterday|add:1 }}0%{% else %}10px{% endif %}; width: 6px;"></div>
-                                        <div class="bg-red-500 rounded-sm" style="height: {% if overtime_visitors > 0 %}{{ overtime_visitors|add:1 }}0%{% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-red-200 dark:bg-red-800 rounded-sm" style="height: {% if overtime_visitors_yesterday > 0 %}min(100%, {{ overtime_visitors_yesterday|add:1 }}0%){% else %}10px{% endif %}; width: 6px;"></div>
+                        <div class="bg-red-500 rounded-sm" style="height: {% if overtime_visitors > 0 %}min(100%, {{ overtime_visitors|add:1 }}0%){% else %}10px{% endif %}; width: 6px;"></div>
                                     </div>
                                     <div class="flex justify-between text-xs text-gray-500 mt-1">
                                         <span>Yesterday: {{ overtime_visitors_yesterday|default:0 }}</span>
@@ -572,6 +572,7 @@
                                              <div id="plate-image-preview" class="hidden mt-2">
                                                  <img id="plate-image" src="" alt="License Plate" class="max-w-xs h-auto rounded-lg border border-gray-300 dark:border-gray-600">
                                                  <input type="hidden" id="plate-image-data" name="plate_image_data">
+                                                 <input type="hidden" id="plate-image-url" name="plate_image_url">
                                              </div>
                                              {% if field.help_text %}
                                                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ field.help_text }}</p>
@@ -1629,6 +1630,7 @@
             const plateImagePreview = document.getElementById('plate-image-preview');
             const plateImage = document.getElementById('plate-image');
             const plateImageData = document.getElementById('plate-image-data');
+            const plateImageUrlField = document.getElementById('plate-image-url');
             
             // Show loading state
             const originalPlaceholder = vehicleInput.placeholder;
@@ -1640,30 +1642,50 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    },
+                    credentials: 'same-origin'
                 });
+
+                // Robust response handling: if not JSON, parse text to avoid crash
+                const contentType = response.headers.get('content-type') || '';
+                let data;
+                if (contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    const statusLabel = response.status ? `HTTP ${response.status}` : 'Unknown status';
+                    throw new Error(`Non-JSON response (${statusLabel}). ${text.startsWith('<') ? 'Server returned an HTML error page.' : text.substring(0, 200)}`);
+                }
                 
-                const data = await response.json();
-                
+                // Selalu tampilkan gambar jika tersedia, meski parsing gagal
+                if (data.image_base64 || data.image_url) {
+                    const src = data.image_base64 ? ('data:image/jpeg;base64,' + data.image_base64) : data.image_url;
+                    plateImage.src = src;
+                    if (data.image_base64) {
+                        plateImageData.value = data.image_base64;
+                        plateImageUrlField.value = '';
+                    } else {
+                        // If only URL provided, store it for backend saving
+                        plateImageData.value = '';
+                        plateImageUrlField.value = data.image_url || '';
+                    }
+                    plateImagePreview.classList.remove('hidden');
+                    showPlateToast(src, data.plate_number || '');
+                }
+
                 if (data.success) {
                     // Auto-fill vehicle number
                     vehicleInput.value = data.plate_number;
-                    
-                    // Show plate image
-                    if (data.image_base64) {
-                        plateImage.src = 'data:image/jpeg;base64,' + data.image_base64;
-                        plateImageData.value = data.image_base64;
-                        plateImagePreview.classList.remove('hidden');
-                    }
-                    
                     // Show success message
                     vehicleInput.placeholder = 'Plate scanned successfully!';
-                    setTimeout(() => {
-                        vehicleInput.placeholder = originalPlaceholder;
-                    }, 3000);
+                    setTimeout(() => { vehicleInput.placeholder = originalPlaceholder; }, 3000);
                 } else {
-                    throw new Error(data.error || 'Failed to scan plate');
+                    // Tetap lanjut jika gambar tersedia, tapi beri peringatan
+                    const msg = data.error || 'Failed to scan plate';
+                    console.warn('Scan plate warning:', msg);
+                    vehicleInput.placeholder = 'Scan partial: image loaded';
+                    setTimeout(() => { vehicleInput.placeholder = originalPlaceholder; }, 3000);
                 }
             } catch (error) {
                 console.error('Scan plate error:', error);
@@ -1721,6 +1743,45 @@
             if (modal) {
                 modal.classList.add('hidden');
             }
+        }
+
+        // Lightweight toast popup to show scanned snapshot
+        function showPlateToast(imageUrl, plateNumber) {
+            // Remove existing toast if any
+            const existing = document.getElementById('plateImageToast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'plateImageToast';
+            toast.style.position = 'fixed';
+            toast.style.right = '16px';
+            toast.style.bottom = '16px';
+            toast.style.zIndex = '9999';
+            toast.style.background = 'rgba(255,255,255,0.95)';
+            toast.style.border = '1px solid #e5e7eb';
+            toast.style.borderRadius = '12px';
+            toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.15)';
+            toast.style.padding = '10px';
+            toast.style.width = '220px';
+            toast.style.color = '#111827';
+            toast.className = 'dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100';
+
+            toast.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <div style="font-weight:600; font-size:13px;">Plate Snapshot</div>
+                  <button id="plateToastClose" aria-label="Close" style="color:#6b7280">&times;</button>
+                </div>
+                <div style="text-align:center">
+                  <img src="${imageUrl}" alt="Plate Image" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #e5e7eb" />
+                  ${plateNumber ? `<div style="margin-top:6px; font-size:12px; color:#374151">${plateNumber}</div>` : ''}
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Close handlers
+            toast.querySelector('#plateToastClose').addEventListener('click', () => toast.remove());
+            setTimeout(() => { if (document.getElementById('plateImageToast')) toast.remove(); }, 5000);
         }
         
         // Close modal when clicking outside

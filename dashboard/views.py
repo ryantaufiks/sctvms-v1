@@ -11,10 +11,20 @@ import json
 import requests
 import logging
 import base64
+import re
 from django.core.files.base import ContentFile
+from django.conf import settings
 from visitors.models import Visitor, OccurrenceLog
 
-from site_settings.models import VisitorCategory, Site, HikvisionConfiguration, DahuaConfiguration, SiteConfiguration
+
+def natural_sort_key(s):
+    """
+    Natural sort key for sorting strings with numbers correctly.
+    Example: ['A1', 'A10', 'A2'] -> ['A1', 'A2', 'A10']
+    """
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+
+from site_settings.models import VisitorCategory, Site, SiteConfiguration, HikvisionConfiguration, DahuaConfiguration
 from requests.auth import HTTPDigestAuth
 
 # Configure logging for door control
@@ -92,9 +102,6 @@ def index(request):
         check_in_time__isnull=False,
         check_in_time__gte=midnight_today
     ).count()
-
-    # Total Today across all categories (checked in today, regardless of check-out)
-    today_total = visitors_today + contractors_today + deliveries_today
     
     # Yesterday's data for comparison
     visitors_yesterday = Visitor.objects.filter(
@@ -152,14 +159,18 @@ def index(request):
         check_in_time__isnull=False
     ).select_related('category', 'pre_registration').order_by('-check_in_time')
     
-    # Get upcoming count based on PreRegistration expected arrival (more robust)
+    # Get upcoming pre-registered visitors for today
     from visitors.models import PreRegistration
+    upcoming_visitors_query = Visitor.objects.filter(
+        is_pre_registered=True,
+        check_in_time__isnull=True,
+        pre_registration__expected_arrival_date=today,
+        pre_registration__is_verified=False
+    ).select_related('category', 'pre_registration').order_by('pre_registration__created_at')
+
+    # New: separate counts for header chips
     active_visitors_count = active_visitors_query.count()
-    upcoming_visitors_count = PreRegistration.objects.filter(
-        expected_arrival_date=today,
-        is_verified=False,
-        visitor__check_in_time__isnull=True
-    ).count()
+    upcoming_visitors_count = upcoming_visitors_query.count()
     
     # Combine queries for pagination
     from django.db.models import Q
@@ -228,8 +239,15 @@ def index(request):
             'area_of_visit': {'visible': True, 'required': False},
         }
     
-    # Get address configuration
+    # Get address configuration and sort options for better UX
     address_config = AddressConfiguration.objects.first()
+    if address_config:
+        if address_config.tower_options:
+            address_config.tower_options = sorted(address_config.tower_options, key=natural_sort_key)
+        if address_config.level_options:
+            address_config.level_options = sorted(address_config.level_options, key=natural_sort_key)
+        if address_config.unit_options:
+            address_config.unit_options = sorted(address_config.unit_options, key=natural_sort_key)
     
     # Check if using area of visit mode
     use_area_of_visit = address_config and address_config.address_mode == 'area_of_visit'
@@ -297,8 +315,9 @@ def index(request):
                 
                 visitor = Visitor.objects.create(**visitor_data)
                 
-                # Handle plate image if provided
+                # Handle plate image if provided (base64 or media URL)
                 plate_image_data = request.POST.get('plate_image_data')
+                plate_image_url = request.POST.get('plate_image_url')
                 if plate_image_data:
                     try:
                         # Decode base64 image
@@ -308,6 +327,40 @@ def index(request):
                     except Exception as e:
                         # Log error but don't fail registration
                         logger.error(f'Failed to save plate image for visitor {visitor.id}: {str(e)}')
+                elif plate_image_url:
+                    try:
+                        # Convert media URL (relative or absolute) to local path and save
+                        # Handles '/media/plate_images/preview_*.jpg' or 'http://host:port/media/plate_images/preview_*.jpg'
+                        from urllib.parse import urlparse
+                        from pathlib import Path
+                        parsed = urlparse(plate_image_url)
+                        rel_path = parsed.path or plate_image_url
+                        # Normalize to path under MEDIA_ROOT
+                        if settings.MEDIA_URL and rel_path.startswith(settings.MEDIA_URL):
+                            rel_path = rel_path[len(settings.MEDIA_URL):]
+                        elif '/media/' in rel_path:
+                            rel_path = rel_path.split('/media/', 1)[-1]
+                        src_path = Path(settings.MEDIA_ROOT) / rel_path
+                        if src_path.exists():
+                            with open(src_path, 'rb') as f:
+                                image_file = ContentFile(f.read(), name=f'plate_{visitor.id}_{visitor.pass_number}.jpg')
+                                visitor.plate_image.save(f'plate_{visitor.id}_{visitor.pass_number}.jpg', image_file, save=True)
+                        else:
+                            # If local file not found (e.g., served via external media server), try HTTP download.
+                            try:
+                                resp = requests.get(plate_image_url, timeout=5)
+                                if resp.status_code == 200:
+                                    visitor.plate_image.save(
+                                        f'plate_{visitor.id}_{visitor.pass_number}.jpg',
+                                        ContentFile(resp.content),
+                                        save=True
+                                    )
+                                else:
+                                    logger.warning(f'Plate image URL returned HTTP {resp.status_code}: {plate_image_url}')
+                            except Exception as dl_err:
+                                logger.error(f'HTTP download failed for plate image URL {plate_image_url}: {dl_err}')
+                    except Exception as e:
+                        logger.error(f'Failed to save plate image via URL for visitor {visitor.id}: {str(e)}')
                 
                 # Auto-whitelist vehicle plate if provided (only if ALPR whitelist is enabled)
                 try:
@@ -320,6 +373,12 @@ def index(request):
                         )
                         if sync_result.get('success'):
                             messages.success(request, f'License plate {visitor.vehicle_number} synced to camera whitelist.')
+                            # Open the barrier right away when auto gate is enabled
+                            if site_config.enable_auto_gate_on_checkin:
+                                from visitors.alpr_utils import ALPRCameraManager
+                                gate_result = ALPRCameraManager().open_gate(plate_number=visitor.vehicle_number)
+                                if not gate_result.get('success'):
+                                    messages.warning(request, f'Auto gate open failed: {gate_result.get("error")}')
                         else:
                             messages.warning(request, f'Whitelist sync failed: {sync_result.get("error")}')
                 except Exception as e:
@@ -423,7 +482,6 @@ def index(request):
         'visitors_today': visitors_today,
         'contractors_today': contractors_today,
         'deliveries_today': deliveries_today,
-        'today_total': today_total,
         # Yesterday's Stats
         'visitors_yesterday': visitors_yesterday,
         'contractors_yesterday': contractors_yesterday,
@@ -456,7 +514,7 @@ def index(request):
         'categories': categories,
         'form_fields': form_fields_list,
         'address_config': address_config,
-        # Feature flags for UI controls
+        # Door/Gate button settings
         'site_config': site_config,
     }
     
@@ -492,13 +550,10 @@ def door_control_api(request):
                     'success': False,
                     'message': 'No active site found. Please configure your site settings.'
                 }, status=500)
-            
-            # Feature flag guard: Door Control
-            try:
-                cfg = SiteConfiguration.objects.filter(site=site).first()
-            except Exception:
-                cfg = None
-            if cfg and not getattr(cfg, 'enable_door_control', False):
+
+            # Feature flag guard: Side Door button
+            cfg = SiteConfiguration.objects.filter(site=site).first()
+            if cfg and not cfg.enable_side_door_button:
                 return JsonResponse({
                     'success': False,
                     'message': 'Door control is disabled by administrator.'
@@ -621,13 +676,18 @@ def gate_control_api(request):
     API endpoint to control Dahua ANPR Camera gate access
     Endpoint: /api/gate-control/
     Method: POST
-    Body: {"action": "open", "channel": 1} (channel is optional)
+    Body: {"action": "open", "channel": 1, "plate_number": "ABC123"} (channel and plate_number optional)
+    
+    Uses Dahua trafficSnap.cgi openStrobe API:
+    /cgi-bin/trafficSnap.cgi?action=openStrobe&channel=1&info.openType=Normal&info.plateNumber=XXX
     """
     try:
-        # Parse request body
+        from visitors.alpr_utils import ALPRCameraManager
+        
         data = json.loads(request.body)
         action = data.get('action')
-        channel = data.get('channel')  # Optional override
+        channel = data.get('channel')
+        plate_number = data.get('plate_number', 'MANUAL')
         
         if action != 'open':
             return JsonResponse({
@@ -635,114 +695,37 @@ def gate_control_api(request):
                 'message': 'Invalid action. Only "open" is supported.'
             }, status=400)
         
-        # Get the current site (assuming first site for now, can be enhanced)
-        try:
-            site = Site.objects.filter(is_active=True).first()
-            if not site:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'No active site found. Please configure your site settings.'
-                }, status=500)
-            
-            # Feature flag guard: Gate Control
-            try:
-                cfg = SiteConfiguration.objects.filter(site=site).first()
-            except Exception:
-                cfg = None
-            if cfg and not getattr(cfg, 'enable_gate_control', False):
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Gate control is disabled by administrator.'
-                }, status=403)
+        logger.info(f"User {request.user.username} attempting to open gate via Open Gate button")
 
-            # Get Dahua configuration for the site
-            dahua_config = DahuaConfiguration.get_or_create_for_site(site)
-            
-            if not dahua_config.is_enabled:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Dahua ANPR Camera integration is disabled. Please enable it in admin settings.'
-                }, status=503)
-            
-            if not dahua_config.password:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Dahua ANPR Camera is not configured. Please set up authentication in admin settings.'
-                }, status=503)
-                
-        except Exception as e:
-            logger.error(f"Error getting Dahua configuration: {str(e)}")
+        # Feature flag guard: Gate button
+        cfg = SiteConfiguration.objects.first()
+        if cfg and not cfg.enable_gate_button:
             return JsonResponse({
                 'success': False,
-                'message': 'Configuration error. Please check admin settings.'
-            }, status=500)
+                'message': 'Gate control is disabled by administrator.'
+            }, status=403)
+
+        camera_manager = ALPRCameraManager()
+        result = camera_manager.open_gate(
+            plate_number=plate_number,
+            channel=channel
+        )
         
-        # Use channel number from request or default from config
-        target_channel = channel if channel is not None else dahua_config.default_channel
-        
-        # Build the endpoint URL with query parameters
-        endpoint_url = f"{dahua_config.gate_control_endpoint}?action=openDoor&channel={target_channel}"
-        
-        # Set up Digest authentication
-        auth = HTTPDigestAuth(dahua_config.username, dahua_config.password)
-        
-        logger.info(f"User {request.user.username} attempting to open gate on channel {target_channel} via Dahua ANPR Camera at {dahua_config.camera_ip}")
-        
-        try:
-            # Make request to Dahua ANPR Camera
-            response = requests.get(
-                endpoint_url,
-                auth=auth,
-                timeout=dahua_config.timeout_seconds,
-                headers={
-                    'User-Agent': 'MonolithVMS/1.0'
-                },
-                verify=False  # Disable SSL verification for self-signed certificates
-            )
-            
-            # Check if request was successful
-            if response.status_code == 200:
-                logger.info(f"Gate on channel {target_channel} opened successfully by user {request.user.username}")
-                return JsonResponse({
-                    'success': True,
-                    'message': f'Gate on channel {target_channel} opened successfully',
-                    'timestamp': timezone.now().isoformat(),
-                    'channel': target_channel
-                })
-            elif response.status_code == 401:
-                logger.warning(f"Authentication failed for Dahua ANPR Camera at {dahua_config.camera_ip}")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Authentication failed. Please check username and password in admin settings.'
-                }, status=401)
-            else:
-                logger.warning(f"Dahua ANPR Camera returned status {response.status_code}: {response.text}")
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Camera responded with status {response.status_code}',
-                    'details': response.text[:200]  # Limit response text
-                }, status=502)
-                
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout connecting to Dahua ANPR Camera at {dahua_config.camera_ip}")
+        if result['success']:
+            return JsonResponse({
+                'success': True,
+                'message': result.get('message', 'Gate opened successfully'),
+                'timestamp': timezone.now().isoformat(),
+                'channel': result.get('channel'),
+                'plate_number': result.get('plate_number')
+            })
+        else:
+            error_msg = result.get('error', 'Failed to open gate')
+            logger.warning(f"Gate control failed: {error_msg}")
             return JsonResponse({
                 'success': False,
-                'message': f'Connection timeout after {dahua_config.timeout_seconds} seconds. ANPR Camera may be offline.'
-            }, status=504)
-            
-        except requests.exceptions.ConnectionError:
-            logger.error(f"Connection error to Dahua ANPR Camera at {dahua_config.camera_ip}")
-            return JsonResponse({
-                'success': False,
-                'message': 'Cannot connect to ANPR Camera. Check network connection and IP address.'
+                'message': error_msg
             }, status=503)
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request error to Dahua ANPR Camera: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': 'Network error occurred while contacting ANPR Camera.'
-            }, status=502)
             
     except json.JSONDecodeError:
         return JsonResponse({

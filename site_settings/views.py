@@ -236,7 +236,6 @@ def settings_dashboard(request):
         'sites_count': sites_count,
         'categories_count': categories_count,
         'site_config': site_config,
-        'site': site,
     }
     return render(request, 'site_settings/settings_dashboard.html', context)
 
@@ -352,6 +351,21 @@ def update_form_fields(request):
         config.enable_otp = 'enable_otp' in request.POST
         config.enable_printer = 'enable_printer' in request.POST
         
+        # Update door/gate button settings
+        config.enable_side_door_button = 'enable_side_door_button' in request.POST
+        config.enable_gate_button = 'enable_gate_button' in request.POST
+        config.enable_auto_gate_on_checkin = 'enable_auto_gate_on_checkin' in request.POST
+        
+        # Update print slip format
+        config.print_slip_format = request.POST.get('print_slip_format', '0')
+        
+        # Update CSS mode (CDN or Local)
+        use_local_css_value = request.POST.get('use_local_css', 'false')
+        config.use_local_css = use_local_css_value == 'true'
+        
+        # Update face capture setting for self-registration
+        config.enable_face_capture = 'enable_face_capture' in request.POST
+        
         config.save()
         
         messages.success(request, 'Form field configuration updated successfully')
@@ -373,8 +387,13 @@ def update_address_options(request):
             field_type = data.get('field_type')
             value = data.get('value')
             
-            if not all([action, field_type, value]):
+            # Validate required parameters based on action type
+            if not action or not field_type:
                 return JsonResponse({'success': False, 'error': 'Missing required parameters'})
+            
+            # For single-item actions, value is required
+            if action in ['add', 'remove'] and not value:
+                return JsonResponse({'success': False, 'error': 'Missing value parameter'})
             
             # Get or create address configuration
             address_config, created = AddressConfiguration.objects.get_or_create(
@@ -437,6 +456,44 @@ def update_address_options(request):
                     return JsonResponse({'success': True})
                 else:
                     return JsonResponse({'success': False, 'error': 'Option not found'})
+            
+            elif action == 'bulk_add':
+                # value should be a list of items to add
+                values = data.get('values', [])
+                if not values:
+                    return JsonResponse({'success': False, 'error': 'No values provided'})
+                
+                added_count = 0
+                for val in values:
+                    val = val.strip()
+                    if val and val not in current_options:
+                        current_options.append(val)
+                        added_count += 1
+                
+                setattr(address_config, field_options_attr, current_options)
+                address_config.save()
+                return JsonResponse({'success': True, 'added_count': added_count})
+            
+            elif action == 'bulk_remove':
+                # value should be a list of items to remove
+                values = data.get('values', [])
+                if not values:
+                    return JsonResponse({'success': False, 'error': 'No values provided'})
+                
+                removed_count = 0
+                for val in values:
+                    if val in current_options:
+                        current_options.remove(val)
+                        removed_count += 1
+                
+                setattr(address_config, field_options_attr, current_options)
+                address_config.save()
+                return JsonResponse({'success': True, 'removed_count': removed_count})
+            
+            elif action == 'clear_all':
+                setattr(address_config, field_options_attr, [])
+                address_config.save()
+                return JsonResponse({'success': True})
             
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid action'})
@@ -686,7 +743,6 @@ def download_backup(request):
 @admin_required
 def alpr_whitelist(request):
     """ALPR Whitelist management view"""
-    # Feature flag guard: block access when ALPR whitelist disabled
     site = Site.objects.first()
     config = None
     if site:

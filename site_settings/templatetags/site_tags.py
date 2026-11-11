@@ -1,7 +1,18 @@
 from django import template
-from site_settings.models import Site, SiteLogo
+from site_settings.models import Site, SiteLogo, SiteConfiguration
 
 register = template.Library()
+
+@register.simple_tag
+def get_site_config():
+    """Get the site configuration for CSS mode and other settings"""
+    try:
+        config = SiteConfiguration.objects.first()
+        if config:
+            return config
+        return type('obj', (object,), {'use_local_css': False})()
+    except:
+        return type('obj', (object,), {'use_local_css': False})()
 
 @register.simple_tag
 def get_site_logo():

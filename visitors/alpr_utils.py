@@ -36,7 +36,97 @@ class ALPRCameraManager:
             self.config.username and 
             self.config.password
         )
-    
+
+    def _resolve_camera(self, camera_target='default'):
+        """
+        Resolve connection details for a camera target.
+
+        Returns (base_url, username, password, None) on success or
+        (None, None, None, error_message) when the target is not usable.
+        """
+        if not self.config:
+            return None, None, None, 'ALPR camera configuration not found'
+
+        if camera_target == 'resident':
+            if not (self.config.resident_is_enabled and self.config.resident_camera_ip and self.config.resident_username and self.config.resident_password):
+                return None, None, None, 'Resident camera is not configured or disabled'
+            return self.config.resident_camera_url, self.config.resident_username, self.config.resident_password, None
+
+        if camera_target == 'visitor_out':
+            if not (self.config.visitor_out_is_enabled and self.config.visitor_out_camera_ip and self.config.visitor_out_username and self.config.visitor_out_password):
+                return None, None, None, 'Visitor Out camera is not configured or disabled'
+            return self.config.visitor_out_camera_url, self.config.visitor_out_username, self.config.visitor_out_password, None
+
+        if not self.is_camera_available():
+            return None, None, None, 'ALPR camera is not configured or disabled'
+        return self.config.camera_url, self.config.username, self.config.password, None
+
+    def open_gate(self, plate_number='MANUAL', channel=None, camera_target='default'):
+        """
+        Open the barrier gate via Dahua HTTP API (trafficSnap.cgi openStrobe).
+
+        GET /cgi-bin/trafficSnap.cgi?action=openStrobe&channel=1&info.openType=Normal&info.plateNumber=XXX
+        """
+        base_url, username, password, error = self._resolve_camera(camera_target)
+        if error:
+            return {'success': False, 'error': error}
+
+        try:
+            channel = int(channel or self.config.default_channel or 1)
+        except (TypeError, ValueError):
+            channel = self.config.default_channel or 1
+        normalized_plate = (plate_number or 'MANUAL').replace(' ', '').upper()
+
+        try:
+            url = f"{base_url}/cgi-bin/trafficSnap.cgi"
+            params = {
+                'action': 'openStrobe',
+                'channel': channel,
+                'info.openType': 'Normal',
+                'info.plateNumber': normalized_plate,
+            }
+            query = urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+
+            logger.info(f"Opening gate via openStrobe (channel={channel}, plate={normalized_plate}, target={camera_target})")
+
+            response = requests.get(
+                f"{url}?{query}",
+                auth=requests.auth.HTTPDigestAuth(username, password),
+                timeout=self.config.timeout_seconds,
+            )
+
+            logger.info(f"Dahua openStrobe response: {response.status_code} - {response.text}")
+
+            if response.status_code == 200 and ('ok' in response.text.lower() or response.text.strip() == ''):
+                return {
+                    'success': True,
+                    'message': 'Gate opened successfully',
+                    'channel': channel,
+                    'plate_number': normalized_plate,
+                }
+            error_msg = f"Camera responded with status {response.status_code}: {response.text}"
+            logger.error(error_msg)
+            return {'success': False, 'error': error_msg}
+
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout opening gate at {base_url}")
+            return {
+                'success': False,
+                'error': f'Connection timeout after {self.config.timeout_seconds} seconds'
+            }
+        except requests.exceptions.ConnectionError:
+            logger.error(f"Connection error opening gate at {base_url}")
+            return {
+                'success': False,
+                'error': 'Cannot connect to ALPR camera. Check network connection.'
+            }
+        except Exception as e:
+            logger.error(f"Error opening gate: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Unexpected error: {str(e)}'
+            }
+
     def add_to_whitelist(self, plate_number, visitor_name=None, expiry_hours=24, begin_time=None, end_time=None, camera_target: str = 'default'):
         """
         Add a plate number to the ALPR camera whitelist using Dahua HTTP API V2.76
@@ -45,27 +135,9 @@ class ALPRCameraManager:
         camera_target: 'default' (main camera) or 'resident' (resident-specific camera)
         """
         # Resolve camera target configuration
-        if not self.config:
-            return {'success': False, 'error': 'ALPR camera configuration not found'}
-
-        if camera_target == 'resident':
-            if not (self.config.resident_is_enabled and self.config.resident_camera_ip and self.config.resident_username and self.config.resident_password):
-                return {
-                    'success': False,
-                    'error': 'Resident camera is not configured or disabled'
-                }
-            base_url = self.config.resident_camera_url
-            username = getattr(self.config, 'resident_username', self.config.username)
-            password = getattr(self.config, 'resident_password', self.config.password)
-        else:
-            if not self.is_camera_available():
-                return {
-                    'success': False,
-                    'error': 'ALPR camera is not configured or disabled'
-                }
-            base_url = self.config.camera_url
-            username = self.config.username
-            password = self.config.password
+        base_url, username, password, error = self._resolve_camera(camera_target)
+        if error:
+            return {'success': False, 'error': error}
         
         try:
             normalized_plate = plate_number.replace(' ', '').upper()
@@ -167,19 +239,21 @@ class ALPRCameraManager:
                 'error': f'Unexpected error: {str(e)}'
             }
 
-    def remove_from_whitelist(self, plate_number):
-        """Remove a plate number from the ALPR whitelist"""
-        if not self.is_camera_available():
-            return {
-                'success': False,
-                'error': 'ALPR camera is not configured or disabled'
-            }
+    def remove_from_whitelist(self, plate_number, camera_target: str = 'default'):
+        """
+        Remove a plate number from the ALPR whitelist
+
+        camera_target: 'default' (main camera) or 'resident' (resident-specific camera)
+        """
+        base_url, username, password, error = self._resolve_camera(camera_target)
+        if error:
+            return {'success': False, 'error': error}
         
         try:
             normalized_plate = plate_number.replace(' ', '').upper()
 
             # First, find the record to get RecNo
-            find_url = f"{self.config.camera_url}/cgi-bin/recordFinder.cgi"
+            find_url = f"{base_url}/cgi-bin/recordFinder.cgi"
             find_params = {
                 'action': 'find',
                 'name': 'TrafficRedList',
@@ -192,7 +266,7 @@ class ALPRCameraManager:
             find_response = requests.get(
                 find_url,
                 params=find_params,
-                auth=requests.auth.HTTPDigestAuth(self.config.username, self.config.password),
+                auth=requests.auth.HTTPDigestAuth(username, password),
                 timeout=self.config.timeout_seconds,
             )
             
@@ -222,7 +296,7 @@ class ALPRCameraManager:
                 }
 
             # Now delete using RecNo
-            delete_url = f"{self.config.camera_url}/cgi-bin/recordUpdater.cgi"
+            delete_url = f"{base_url}/cgi-bin/recordUpdater.cgi"
             delete_params = {
                 'action': 'delete',
                 'name': 'TrafficRedList',
@@ -234,7 +308,7 @@ class ALPRCameraManager:
             response = requests.get(
                 delete_url,
                 params=delete_params,
-                auth=requests.auth.HTTPDigestAuth(self.config.username, self.config.password),
+                auth=requests.auth.HTTPDigestAuth(username, password),
                 timeout=self.config.timeout_seconds,
             )
             

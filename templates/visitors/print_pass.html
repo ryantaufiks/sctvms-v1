@@ -6,153 +6,198 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visitor Pass - {{ visitor.full_name }}</title>
     <style>
-        @page {
-            size: 80mm auto;
-            margin: 0;
-        }
-
         @media print {
-            body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .no-print { display: none !important; }
-            .print-container { page-break-inside: avoid; border: none; }
+            body { margin: 0; }
+            .no-print { display: none; }
+            .print-container { page-break-inside: avoid; }
         }
-
+        
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 5px;
-            background: white;
-            font-size: 11px;
-            line-height: 1.2;
+            padding: 20px;
+            background-color: #f5f5f5;
         }
-
+        
         .print-container {
-            width: 220px;
+            max-width: 400px;
             margin: 0 auto;
-            padding: 10px;
-            border: 2px solid black;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
+        
         .header {
             text-align: center;
-            border-bottom: 2px solid black;
-            padding-bottom: 8px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .site-logo {
+            max-height: 60px;
             margin-bottom: 10px;
         }
-
-        .site-logo {
-            max-height: 40px;
-            margin-bottom: 5px;
-        }
-
+        
         .site-name {
-            font-size: 16px;
+            font-size: 24px;
             font-weight: bold;
+            color: #333;
             margin: 0;
         }
-
+        
         .pass-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin: 3px 0 0 0;
+            font-size: 18px;
+            color: #666;
+            margin: 5px 0 0 0;
         }
-
+        
         .visitor-info {
-            margin: 10px 0;
+            margin: 20px 0;
         }
-
+        
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin: 4px 0;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px dotted #ccc;
         }
-
+        
         .info-label {
             font-weight: bold;
-            width: 35%;
+            color: #333;
+            width: 40%;
         }
-
+        
         .info-value {
-            width: 65%;
+            color: #666;
+            width: 60%;
             text-align: right;
-            word-break: break-word;
         }
-
+        
         .pass-number {
             text-align: center;
-            margin: 12px 0;
-            padding: 8px;
-            border: 2px solid black;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f8ff;
+            border: 2px dashed #4a90e2;
+            border-radius: 8px;
         }
-
+        
         .pass-number-label {
-            font-size: 10px;
-            font-weight: bold;
-            margin-bottom: 3px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
         }
-
+        
         .pass-number-value {
-            font-size: 24px;
+            font-size: 32px;
             font-weight: bold;
-            letter-spacing: 2px;
+            color: #4a90e2;
+            letter-spacing: 3px;
         }
-
+        
         .qr-section {
             text-align: center;
-            margin: 10px 0;
-            padding: 5px;
-            border: 1px solid black;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
         }
-
+        
         .qr-code {
-            max-width: 80px;
+            max-width: 120px;
             height: auto;
-            margin: 5px 0;
+            margin: 10px 0;
         }
-
+        
         .qr-label {
-            font-size: 9px;
-            margin-top: 3px;
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
         }
-
+        
         .footer {
             text-align: center;
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px solid black;
-            font-size: 9px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #ccc;
+            font-size: 12px;
+            color: #666;
         }
-
+        
         .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
             font-weight: bold;
+            text-transform: uppercase;
         }
-
+        
         .status-active {
-            color: black;
+            background: #d4edda;
+            color: #155724;
         }
-
+        
         .status-expired {
-            text-decoration: line-through;
+            background: #f8d7da;
+            color: #721c24;
         }
-
+        
         .print-actions {
             text-align: center;
-            margin: 10px 0;
+            margin: 20px auto;
+            max-width: 400px;
         }
-
+        
         .btn {
-            display: inline-block;
-            padding: 8px 16px;
-            margin: 0 5px;
-            border: 1px solid black;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 32px;
+            margin: 8px;
+            border: none;
+            border-radius: 12px;
             cursor: pointer;
             text-decoration: none;
-            font-size: 12px;
-            background: white;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.2s;
+            min-width: 160px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-
-        .btn:hover {
-            background: #ccc;
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-primary:hover, .btn-primary:active {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(107, 114, 128, 0.3);
+        }
+        
+        .btn-secondary:hover, .btn-secondary:active {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            transform: translateY(-1px);
+        }
+        
+        @media (max-width: 480px) {
+            .btn { width: 100%; margin: 8px 0; }
         }
     </style>
 </head>
@@ -192,12 +237,10 @@
             </div>
             {% endif %}
             
-            {% if visitor.category %}
             <div class="info-row">
                 <span class="info-label">Category:</span>
                 <span class="info-value">{{ visitor.category.name }}</span>
             </div>
-            {% endif %}
             
             <div class="info-row">
                 <span class="info-label">Contact:</span>
@@ -206,20 +249,20 @@
             
             {% if visitor.access_pin %}
             <div class="info-row">
-                <span class="info-label">PIN:</span>
+                <span class="info-label">PIN (Second Factor):</span>
                 <span class="info-value">{{ visitor.access_pin }}</span>
             </div>
             {% endif %}
             
             <div class="info-row">
                 <span class="info-label">Check-in:</span>
-                <span class="info-value">{{ visitor.check_in_time|localtime|date:"d/m/y H:i" }}</span>
+                <span class="info-value">{{ visitor.check_in_time|localtime|date:"M d, Y H:i" }}</span>
             </div>
             
             {% if visitor.check_out_time %}
             <div class="info-row">
                 <span class="info-label">Check-out:</span>
-                <span class="info-value">{{ visitor.check_out_time|localtime|date:"d/m/y H:i" }}</span>
+                <span class="info-value">{{ visitor.check_out_time|localtime|date:"M d, Y H:i" }}</span>
             </div>
             {% endif %}
             
@@ -233,14 +276,21 @@
             {% if visitor.purpose %}
             <div class="info-row">
                 <span class="info-label">Purpose:</span>
-                <span class="info-value">{{ visitor.purpose|truncatechars:20 }}</span>
+                <span class="info-value">{{ visitor.purpose|truncatechars:30 }}</span>
             </div>
             {% endif %}
             
             {% if visitor.is_pre_registered and visitor.pre_registration %}
             <div class="info-row">
                 <span class="info-label">Host:</span>
-                <span class="info-value">{{ visitor.pre_registration.registered_by.get_full_name|default:visitor.pre_registration.registered_by.username|truncatechars:15 }}</span>
+                <span class="info-value">{{ visitor.pre_registration.registered_by.get_full_name|default:visitor.pre_registration.registered_by.username|truncatechars:25 }}</span>
+            </div>
+            {% endif %}
+            
+            {% if visitor.is_pre_registered and visitor.pre_registration.expected_arrival_date %}
+            <div class="info-row">
+                <span class="info-label">Arrival Date:</span>
+                <span class="info-value">{{ visitor.pre_registration.expected_arrival_date|date:"M d, Y" }}</span>
             </div>
             {% endif %}
             
@@ -248,9 +298,9 @@
                 <span class="info-label">Status:</span>
                 <span class="info-value">
                     {% if visitor.check_out_time %}
-                        <span class="status-badge status-expired">OUT</span>
+                        <span class="status-badge status-expired">Checked Out</span>
                     {% else %}
-                        <span class="status-badge status-active">ACTIVE</span>
+                        <span class="status-badge status-active">Active</span>
                     {% endif %}
                 </span>
             </div>
@@ -258,16 +308,17 @@
         
         <!-- QR Code -->
         <div class="qr-section">
-            <div style="font-weight: bold; margin-bottom: 5px;">VERIFICATION QR</div>
+            <div style="font-weight: bold; margin-bottom: 10px;">Verification QR Code</div>
             <img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code" class="qr-code">
             <div class="qr-label">Scan for verification</div>
         </div>
         
         <!-- Footer -->
         <div class="footer">
-            <div>Printed: {{ print_time|localtime|date:"d/m/y H:i" }}</div>
-            <div style="margin-top: 3px;">
-                Valid only for this visitor<br>Present to security on request
+            <div>Printed on: {{ print_time|localtime|date:"M d, Y H:i" }}</div>
+            <div style="margin-top: 5px; font-size: 10px;">
+                This pass is valid only for the specified visitor and date.
+                <br>Please present this pass to security upon request.
             </div>
         </div>
     </div>

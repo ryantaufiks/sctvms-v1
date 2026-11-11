@@ -11,8 +11,11 @@ from io import BytesIO
 import os
 
 from visitors.models import Visitor, PreRegistration, ALPRWhitelist, OccurrenceLog
+from residents.models import ResidentVehicleLog, Resident, ResidentVehicle
 from site_settings.models import Site, VisitorCategory
 from accounts.decorators import can_view_reports
+from accounts.models import ActivityLog
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.paginator import Paginator
 
@@ -23,18 +26,33 @@ try:
 except ImportError:
     openpyxl = None
 
+# Import core ReportLab components first; keep charts optional so PDF doesn't fail if a chart module is missing
 try:
     from reportlab.lib.pagesizes import letter, A4
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib import colors
     from reportlab.lib.units import inch
-    from reportlab.lib.utils import ImageReader
-    from reportlab.graphics.shapes import Drawing
-    from reportlab.graphics.charts.barcharts import VerticalBarChart
-    from reportlab.graphics.charts.piecharts import Pie
 except ImportError:
     SimpleDocTemplate = None
+
+# Optional utilities and charts (fail gracefully if unavailable)
+try:
+    from reportlab.lib.utils import ImageReader
+except Exception:
+    ImageReader = None
+try:
+    from reportlab.graphics.shapes import Drawing
+except Exception:
+    Drawing = None
+try:
+    from reportlab.graphics.charts.barcharts import VerticalBarChart
+except Exception:
+    VerticalBarChart = None
+try:
+    from reportlab.graphics.charts.piecharts import Pie
+except Exception:
+    Pie = None
 
 @login_required
 @can_view_reports
@@ -57,7 +75,7 @@ def reports_dashboard(request):
 def visitor_report(request):
     """Generate consolidated visitor reports with smart search and filters"""
     user_profile = request.user.profile
-    export_format = request.GET.get('export')
+    export_format = (request.GET.get('export') or '').strip().lower()
     
     # Get available sites (single site deployment)
     sites = Site.objects.filter(is_active=True)
@@ -147,7 +165,7 @@ def visitor_report(request):
     total_count = visitors.count()
 
     # Handle export requests
-    if export_format:
+    if export_format in {'csv', 'excel', 'pdf'}:
         # If specific visitor IDs are selected, restrict export to those
         selected = request.GET.get('visitors')
         if selected:
@@ -177,12 +195,12 @@ def visitor_report(request):
         'sites': sites,
         'categories': categories,
         'filters': {
-            'category': category_id,
-            'date_from': date_from,
-            'date_to': date_to,
-            'status': status,
-            'search': search,
-            'sort': sort_by,
+            'category': category_id or '',
+            'date_from': date_from or '',
+            'date_to': date_to or '',
+            'status': status or '',
+            'search': search or '',
+            'sort': sort_by or '',
             'page_size': page_size,
             'overtime': overtime,
         },
@@ -261,8 +279,19 @@ def build_professional_pdf_header(site, title_text, subtitle_text):
 def export_visitor_data(visitors, format_type, request):
     """Export visitor data in various formats"""
     filename = f'visitor_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}'
+    fmt = (format_type or '').strip().lower()
     
-    if format_type == 'csv':
+    # Helper: safely return file URL if the image/file exists
+    def _safe_file_url(fieldfile):
+        try:
+            if fieldfile and getattr(fieldfile, 'name', None):
+                return fieldfile.url
+        except Exception:
+            # Covers ValueError: no file associated, and any storage URL error
+            return ''
+        return ''
+    
+    if fmt == 'csv':
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{filename}.csv"'
         
@@ -270,7 +299,7 @@ def export_visitor_data(visitors, format_type, request):
         writer.writerow([
             'Full Name', 'Contact Number', 'Company', 'Category', 
             'Check-in Time', 'Check-out Time', 'Pass Number', 'Vehicle Number',
-            'Purpose', 'IC Last Digits', 'Status', 'Duration'
+            'Tower', 'Level', 'Unit', 'Purpose', 'IC Last Digits', 'Status', 'Duration'
         ])
         
         for visitor in visitors:
@@ -289,6 +318,9 @@ def export_visitor_data(visitors, format_type, request):
                 visitor.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if visitor.check_out_time else '',
                 visitor.pass_number or '',
                 visitor.vehicle_number or '',
+                visitor.tower or '',
+                visitor.level or '',
+                visitor.unit or '',
                 visitor.purpose or '',
                 visitor.ic_last_digits or '',
                 'Checked Out' if visitor.check_out_time else 'Active',
@@ -297,7 +329,7 @@ def export_visitor_data(visitors, format_type, request):
         
         return response
     
-    elif format_type == 'excel' and openpyxl:
+    elif fmt == 'excel' and openpyxl:
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
         
@@ -309,7 +341,7 @@ def export_visitor_data(visitors, format_type, request):
         headers = [
             'Full Name', 'Contact Number', 'Company', 'Category', 
             'Check-in Time', 'Check-out Time', 'Pass Number', 'Vehicle Number',
-            'Purpose', 'IC Last Digits', 'Status', 'Duration'
+            'Tower', 'Level', 'Unit', 'Purpose', 'IC Last Digits', 'Status', 'Duration'
         ]
         
         for col, header in enumerate(headers, 1):
@@ -333,6 +365,9 @@ def export_visitor_data(visitors, format_type, request):
                 visitor.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if visitor.check_out_time else '',
                 visitor.pass_number or '',
                 visitor.vehicle_number or '',
+                visitor.tower or '',
+                visitor.level or '',
+                visitor.unit or '',
                 visitor.purpose or '',
                 visitor.ic_last_digits or '',
                 'Checked Out' if visitor.check_out_time else 'Active',
@@ -345,7 +380,7 @@ def export_visitor_data(visitors, format_type, request):
         workbook.save(response)
         return response
     
-    elif format_type == 'pdf' and SimpleDocTemplate:
+    elif fmt == 'pdf' and SimpleDocTemplate:
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
         
@@ -427,47 +462,80 @@ def export_visitor_data(visitors, format_type, request):
         elements = build_professional_pdf_header(primary_site, 'Visitor Report', date_str)
         styles = getSampleStyleSheet()
         
-        # Detailed visitor table matching current filters
+        # Visitor List Table (matches current filters)
         try:
-            elements.append(Paragraph('Visitor Details', styles['Heading3']))
+            elements.append(Paragraph('Visitor List', styles['Heading3']))
+            elements.append(Spacer(1, 6))
+
+            # Define table headers (include requested fields)
             table_headers = [
-                'Full Name', 'Company', 'Category', 'Check-in', 'Check-out', 'Status', 'Duration'
+                'Visitor', 'Company', 'Vehicle', 'Tower', 'Level', 'Unit',
+                'Purpose', 'Category', 'Check-in', 'Status', 'Duration'
             ]
-            table_data = [table_headers]
+
+            # Build table rows from filtered visitors
+            table_rows = []
             for v in visitors:
-                duration = ''
-                status = 'Checked Out' if v.check_out_time else 'Active'
-                if v.check_out_time:
-                    duration = str(v.check_out_time - v.check_in_time)
-                else:
-                    duration = str(timezone.now() - v.check_in_time)
-                table_data.append([
+                # Status and duration
+                is_checked_out = bool(v.check_out_time)
+                status_text = 'Checked Out' if is_checked_out else 'Active'
+                end_time = v.check_out_time or timezone.now()
+                duration_td = end_time - v.check_in_time if v.check_in_time else timezone.timedelta(0)
+                # Format duration as Hh Mm
+                total_seconds = int(duration_td.total_seconds())
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                duration_text = f"{hours}h {minutes}m"
+
+                # Safe strings
+                company_text = v.company or '-'
+                category_text = v.category.name if getattr(v, 'category', None) else '-'
+                checkin_text = timezone.localtime(v.check_in_time).strftime('%Y-%m-%d %H:%M') if v.check_in_time else '-'
+                vehicle_text = v.vehicle_number or '-'
+                tower_text = getattr(v, 'tower', None) or '-'
+                level_text = getattr(v, 'level', None) or '-'
+                unit_text = getattr(v, 'unit', None) or '-'
+                purpose_text = getattr(v, 'purpose', None) or '-'
+
+                table_rows.append([
                     v.full_name,
-                    v.company or '',
-                    (v.category.name if v.category else ''),
-                    timezone.localtime(v.check_in_time).strftime('%Y-%m-%d %H:%M'),
-                    timezone.localtime(v.check_out_time).strftime('%Y-%m-%d %H:%M') if v.check_out_time else '',
-                    status,
-                    duration,
+                    company_text,
+                    vehicle_text,
+                    tower_text,
+                    level_text,
+                    unit_text,
+                    purpose_text,
+                    category_text,
+                    checkin_text,
+                    status_text,
+                    duration_text,
                 ])
-            v_table = Table(table_data, repeatRows=1)
-            v_table.setStyle(TableStyle([
+
+            data = [table_headers] + table_rows
+
+            # Create and style table
+            visitor_table = Table(data, repeatRows=1)
+            visitor_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1E3A8A')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.black)
+                # Center alignment for compact columns
+                ('ALIGN', (2, 1), (7, -1), 'CENTER'),
+                ('ALIGN', (8, 1), (10, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
             ]))
-            elements.append(v_table)
-            elements.append(Spacer(1, 10))
+
+            elements.append(visitor_table)
+            elements.append(Spacer(1, 12))
         except Exception:
-            # If any unexpected rendering error, continue building the report without table
-            elements.append(Paragraph('Visitor details unavailable.', styles['Italic']))
+            # If table fails for any reason, continue with PDF
+            elements.append(Paragraph('Visitor list unavailable.', styles['Italic']))
             elements.append(Spacer(1, 8))
 
 
@@ -1045,16 +1113,6 @@ def _filtered_visitors_queryset(request):
     else:
         visitors = visitors.order_by('-check_in_time')
 
-    # If specific IDs provided (from bulk selection), restrict to them
-    selected = request.GET.get('visitors')
-    if selected:
-        try:
-            id_list = [int(x) for x in selected.split(',') if x.isdigit()]
-            if id_list:
-                visitors = visitors.filter(id__in=id_list)
-        except Exception:
-            pass
-
     return visitors.select_related('category')
 
 
@@ -1085,10 +1143,14 @@ def visitor_detail_full_api(request, visitor_id):
         'company': visitor.company or '',
         'contact_number': visitor.contact_number or '',
         'category': visitor.category.name if visitor.category else None,
+        'category_id': visitor.category_id,
         'check_in_time': timezone.localtime(visitor.check_in_time).strftime('%Y-%m-%d %H:%M') if visitor.check_in_time else None,
         'check_out_time': timezone.localtime(visitor.check_out_time).strftime('%Y-%m-%d %H:%M') if visitor.check_out_time else None,
         'pass_number': visitor.pass_number or '',
         'vehicle_number': visitor.vehicle_number or '',
+        'tower': visitor.tower or '',
+        'level': visitor.level or '',
+        'unit': visitor.unit or '',
         'purpose': visitor.purpose or '',
         'ic_last_digits': visitor.ic_last_digits or '',
         'status': 'Checked Out' if visitor.check_out_time else 'Active',
@@ -1148,6 +1210,65 @@ def verify_password_api(request):
     password = request.POST.get('password', '')
     ok = request.user.check_password(password) if password else False
     return JsonResponse({'success': ok})
+
+
+@login_required
+@require_POST
+def visitor_edit_api(request, visitor_id):
+    """Edit visitor data. Only allowed for visitors who are still checked in."""
+    visitor = get_object_or_404(Visitor, id=visitor_id)
+    
+    if visitor.check_out_time:
+        return JsonResponse({'success': False, 'error': 'Cannot edit checked-out visitors.'}, status=400)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data.'}, status=400)
+    
+    editable_fields = [
+        'full_name', 'contact_number', 'ic_last_digits', 'company',
+        'vehicle_number', 'tower', 'level', 'unit', 'purpose'
+    ]
+    
+    updated_fields = []
+    for field in editable_fields:
+        if field in data:
+            old_value = getattr(visitor, field, None)
+            new_value = data[field].strip() if data[field] else ''
+            if old_value != new_value:
+                setattr(visitor, field, new_value if new_value else None)
+                updated_fields.append(field)
+    
+    if 'category_id' in data:
+        try:
+            category_id = int(data['category_id']) if data['category_id'] else None
+            if category_id:
+                category = VisitorCategory.objects.get(id=category_id, is_active=True)
+                if visitor.category_id != category_id:
+                    visitor.category = category
+                    updated_fields.append('category')
+            else:
+                if visitor.category_id:
+                    visitor.category = None
+                    updated_fields.append('category')
+        except (ValueError, VisitorCategory.DoesNotExist):
+            pass
+    
+    if updated_fields:
+        visitor.save()
+        ActivityLog.objects.create(
+            user=request.user,
+            action='edit',
+            description=f"Edited visitor {visitor.full_name} (ID: {visitor.id}). Fields updated: {', '.join(updated_fields)}",
+            ip_address=request.META.get('REMOTE_ADDR', '')
+        )
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'Visitor updated successfully. Fields updated: {", ".join(updated_fields)}' if updated_fields else 'No changes made.',
+        'updated_fields': updated_fields
+    })
 
 
 @login_required
@@ -1278,51 +1399,313 @@ def vehicle_report(request):
     
     return render(request, 'reports/vehicle_report.html', context)
 
+
 @login_required
-@require_POST
-def visitor_edit_api(request, visitor_id):
-    """Edit visitor data. Only allowed for visitors who are still checked in."""
-    visitor = get_object_or_404(Visitor, id=visitor_id)
-
-    if visitor.check_out_time:
-        return JsonResponse({'success': False, 'error': 'Cannot edit checked-out visitors.'}, status=400)
-
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON data.'}, status=400)
-
-    editable_fields = [
-        'full_name', 'contact_number', 'ic_last_digits', 'company',
-        'vehicle_number', 'tower', 'level', 'unit', 'purpose'
-    ]
-
-    updated_fields = []
-    for field in editable_fields:
-        if field in data:
-            old_value = getattr(visitor, field, None)
-            new_value = data[field].strip() if data[field] else ''
-            if old_value != new_value:
-                setattr(visitor, field, new_value if new_value else None)
-                updated_fields.append(field)
-
-    if 'category_id' in data:
+@can_view_reports
+def resident_history_report(request):
+    """Generate resident vehicle history reports with filters and export options"""
+    user_profile = request.user.profile
+    export_format = (request.GET.get('export') or '').strip().lower()
+    
+    # Get filter parameters
+    search = request.GET.get('search', '').strip()
+    direction = request.GET.get('direction', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    page = request.GET.get('page', 1)
+    
+    # Build query
+    logs = ResidentVehicleLog.objects.select_related('resident', 'vehicle').all()
+    
+    # Apply filters
+    if search:
+        logs = logs.filter(
+            Q(plate_number__icontains=search) |
+            Q(resident__full_name__icontains=search) |
+            Q(resident__tower__icontains=search) |
+            Q(resident__unit__icontains=search) |
+            Q(resident__phone_number__icontains=search)
+        )
+    
+    if direction in ['in', 'out']:
+        logs = logs.filter(direction=direction)
+    
+    if date_from:
         try:
-            category_id = int(data['category_id']) if data['category_id'] else None
-            if category_id:
-                category = VisitorCategory.objects.get(id=category_id, is_active=True)
-                if visitor.category_id != category_id:
-                    visitor.category = category
-                    updated_fields.append('category')
-            else:
-                if visitor.category_id:
-                    visitor.category = None
-                    updated_fields.append('category')
-        except (ValueError, VisitorCategory.DoesNotExist):
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+            logs = logs.filter(detected_at__date__gte=date_from_obj)
+        except ValueError:
             pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            logs = logs.filter(detected_at__date__lte=date_to_obj)
+        except ValueError:
+            pass
+    
+    logs = logs.order_by('-detected_at')
+    
+    # Statistics
+    today = timezone.now().date()
+    total_logs = ResidentVehicleLog.objects.count()
+    today_logs = ResidentVehicleLog.objects.filter(detected_at__date=today).count()
+    today_in = ResidentVehicleLog.objects.filter(detected_at__date=today, direction='in').count()
+    today_out = ResidentVehicleLog.objects.filter(detected_at__date=today, direction='out').count()
+    unique_residents = ResidentVehicleLog.objects.values('resident').distinct().count()
+    unique_plates = ResidentVehicleLog.objects.values('plate_number').distinct().count()
+    
+    # Handle export
+    if export_format in {'csv', 'excel', 'pdf'}:
+        return export_resident_history(logs, export_format, request)
+    
+    # Pagination
+    paginator = Paginator(logs, 50)
+    try:
+        page_obj = paginator.page(page)
+    except:
+        page_obj = paginator.page(1)
+    
+    context = {
+        'logs': page_obj.object_list,
+        'page_obj': page_obj,
+        'filters': {
+            'search': search,
+            'direction': direction,
+            'date_from': date_from,
+            'date_to': date_to,
+        },
+        'statistics': {
+            'total_logs': total_logs,
+            'today_logs': today_logs,
+            'today_in': today_in,
+            'today_out': today_out,
+            'unique_residents': unique_residents,
+            'unique_plates': unique_plates,
+        },
+        'total_count': logs.count(),
+    }
+    
+    return render(request, 'reports/resident_history_report.html', context)
 
-    if updated_fields:
-        visitor.save()
+
+def export_resident_history(queryset, export_format, request):
+    """Export resident vehicle history to CSV, Excel, or PDF"""
+    logs = list(queryset[:5000])  # Limit exports to 5000 records
+    
+    if export_format == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="resident_history_report.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Plate Number', 'Resident Name', 'Tower', 'Level', 'Unit', 'Phone', 'Direction', 'Detected At'])
+        for log in logs:
+            writer.writerow([
+                log.plate_number,
+                log.resident.full_name if log.resident else '-',
+                log.resident.tower if log.resident else '-',
+                log.resident.level if log.resident else '-',
+                log.resident.unit if log.resident else '-',
+                log.resident.phone_number if log.resident else '-',
+                log.direction.upper(),
+                log.detected_at.strftime('%Y-%m-%d %H:%M:%S') if log.detected_at else '-',
+            ])
+        return response
+    
+    elif export_format == 'excel' and openpyxl:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Resident History"
+        
+        headers = ['Plate Number', 'Resident Name', 'Tower', 'Level', 'Unit', 'Phone', 'Direction', 'Detected At']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+        
+        for row_num, log in enumerate(logs, 2):
+            ws.cell(row=row_num, column=1, value=log.plate_number)
+            ws.cell(row=row_num, column=2, value=log.resident.full_name if log.resident else '-')
+            ws.cell(row=row_num, column=3, value=log.resident.tower if log.resident else '-')
+            ws.cell(row=row_num, column=4, value=log.resident.level if log.resident else '-')
+            ws.cell(row=row_num, column=5, value=log.resident.unit if log.resident else '-')
+            ws.cell(row=row_num, column=6, value=log.resident.phone_number if log.resident else '-')
+            ws.cell(row=row_num, column=7, value=log.direction.upper())
+            ws.cell(row=row_num, column=8, value=log.detected_at.strftime('%Y-%m-%d %H:%M:%S') if log.detected_at else '-')
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="resident_history_report.xlsx"'
+        wb.save(response)
+        return response
+    
+    elif export_format == 'pdf' and SimpleDocTemplate:
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, alignment=1)
+        elements.append(Paragraph("Resident Vehicle History Report", title_style))
+        elements.append(Spacer(1, 20))
+        
+        # Add report info
+        info_style = styles['Normal']
+        elements.append(Paragraph(f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}", info_style))
+        elements.append(Paragraph(f"Total Records: {len(logs)}", info_style))
+        elements.append(Spacer(1, 20))
+        
+        # Table data
+        data = [['Plate', 'Resident', 'Unit', 'Direction', 'Detected At']]
+        for log in logs[:500]:  # Limit PDF to 500 rows for performance
+            data.append([
+                log.plate_number,
+                log.resident.full_name[:20] if log.resident else '-',
+                f"{log.resident.tower or ''}-{log.resident.level or ''}-{log.resident.unit or ''}" if log.resident else '-',
+                log.direction.upper(),
+                log.detected_at.strftime('%m/%d %H:%M') if log.detected_at else '-',
+            ])
+        
+        table = Table(data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="resident_history_report.pdf"'
+        return response
+    
+    # Fallback to CSV if format not supported
+    return export_resident_history(queryset, 'csv', request)
+
+
+@login_required
+def activity_log_report(request):
+    """
+    Activity Log Report for super admin.
+    Shows all user activities with search and filter capabilities.
+    """
+    user_profile = request.user.profile
+    
+    # Only allow admin role to view this report
+    if user_profile.role != 'admin':
+        messages.error(request, "You don't have permission to access this report.")
+        return render(request, 'reports/dashboard.html')
+    
+    export_format = (request.GET.get('export') or '').strip().lower()
+    
+    # Get filter parameters
+    search = request.GET.get('search', '').strip()
+    action_filter = request.GET.get('action', '')
+    module_filter = request.GET.get('module', '')
+    user_filter = request.GET.get('user_id', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    page = request.GET.get('page', 1)
+    
+    # Build query
+    logs = ActivityLog.objects.select_related('user').all()
+    
+    # Apply filters
+    if search:
+        logs = logs.filter(
+            Q(description__icontains=search) |
+            Q(user__username__icontains=search) |
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(target_type__icontains=search) |
+            Q(ip_address__icontains=search)
+        )
+    
+    if action_filter:
+        logs = logs.filter(action=action_filter)
+    
+    if module_filter:
+        logs = logs.filter(module=module_filter)
+    
+    if user_filter:
+        logs = logs.filter(user_id=user_filter)
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+            logs = logs.filter(created_at__date__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            logs = logs.filter(created_at__date__lte=date_to_obj)
+        except ValueError:
+            pass
+    
+    # Calculate statistics on UNFILTERED queryset for global totals
+    today = timezone.now().date()
+    all_logs = ActivityLog.objects.all()
+    total_logs = all_logs.count()
+    today_logs = all_logs.filter(created_at__date=today).count()
+    unique_users = all_logs.values('user').distinct().count()
+    
+    # Action breakdown for today (global)
+    today_logins = all_logs.filter(created_at__date=today, action='login').count()
+    today_creates = all_logs.filter(created_at__date=today, action='create').count()
+    today_updates = all_logs.filter(created_at__date=today, action='update').count()
+    
+    statistics = {
+        'total_logs': total_logs,
+        'today_logs': today_logs,
+        'unique_users': unique_users,
+        'today_logins': today_logins,
+        'today_creates': today_creates,
+        'today_updates': today_updates,
+    }
+    
+    # Count filtered results
+    filtered_count = logs.count()
+    
+    # Handle export
+    if export_format in ['csv', 'excel', 'pdf']:
+        return export_activity_log(logs, export_format, request)
+    
+    # Get users for filter dropdown
+    users = User.objects.filter(is_active=True).order_by('username')
+    
+    # Pagination
+    paginator = Paginator(logs, 50)
+    try:
+        logs_page = paginator.page(page)
+    except:
+        logs_page = paginator.page(1)
+    
+    context = {
+        'logs': logs_page,
+        'statistics': statistics,
+        'total_count': filtered_count,
+        'filters': {
+            'search': search,
+            'action': action_filter,
+            'module': module_filter,
+            'user_id': user_filter,
+            'date_from': date_from,
+            'date_to': date_to,
+        },
+        'users': users,
+        'action_choices': ActivityLog.ACTION_CHOICES,
+        'module_choices': ActivityLog.MODULE_CHOICES,
+        'user_role': user_profile.role,
+    }
+    
+    return render(request, 'reports/activity_log_report.html', context)
+
 
     return JsonResponse({
         'success': True,
@@ -1565,3 +1948,94 @@ def export_occurrences_pdf(request):
     occurrences = OccurrenceLog.objects.select_related('created_by').all().order_by('-created_at')
     # Can apply filters here if needed
     return export_occurrence_data(occurrences, 'pdf', request)
+
+
+def export_activity_log(queryset, export_format, request):
+    """Export activity logs to CSV, Excel, or PDF"""
+    logs = list(queryset[:5000])
+    
+    if export_format == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="activity_log_report.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Date/Time', 'User', 'Action', 'Module', 'Description', 'IP Address'])
+        for log in logs:
+            writer.writerow([
+                log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                log.user.username if log.user else 'System',
+                log.get_action_display(),
+                log.get_module_display(),
+                log.description[:100],
+                log.ip_address or '-',
+            ])
+        return response
+    
+    elif export_format == 'excel' and openpyxl:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Activity Log"
+        
+        headers = ['Date/Time', 'User', 'Action', 'Module', 'Description', 'IP Address']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+        
+        for row_num, log in enumerate(logs, 2):
+            ws.cell(row=row_num, column=1, value=log.created_at.strftime('%Y-%m-%d %H:%M:%S'))
+            ws.cell(row=row_num, column=2, value=log.user.username if log.user else 'System')
+            ws.cell(row=row_num, column=3, value=log.get_action_display())
+            ws.cell(row=row_num, column=4, value=log.get_module_display())
+            ws.cell(row=row_num, column=5, value=log.description[:100])
+            ws.cell(row=row_num, column=6, value=log.ip_address or '-')
+        
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="activity_log_report.xlsx"'
+        wb.save(response)
+        return response
+    
+    elif export_format == 'pdf' and SimpleDocTemplate:
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, alignment=1)
+        elements.append(Paragraph("Activity Log Report", title_style))
+        elements.append(Spacer(1, 20))
+        
+        info_style = styles['Normal']
+        elements.append(Paragraph(f"Generated: {timezone.now().strftime('%Y-%m-%d %H:%M')}", info_style))
+        elements.append(Paragraph(f"Total Records: {len(logs)}", info_style))
+        elements.append(Spacer(1, 20))
+        
+        data = [['Date/Time', 'User', 'Action', 'Module', 'Description']]
+        for log in logs[:500]:
+            data.append([
+                log.created_at.strftime('%m/%d %H:%M'),
+                (log.user.username if log.user else 'System')[:15],
+                log.get_action_display(),
+                log.get_module_display(),
+                log.description[:30],
+            ])
+        
+        table = Table(data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="activity_log_report.pdf"'
+        return response
+    
+    return export_activity_log(queryset, 'csv', request)

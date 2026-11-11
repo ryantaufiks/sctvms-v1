@@ -457,8 +457,21 @@ def print_visitor_pass(request, visitor_id):
         'qr_code_base64': qr_code_base64,
         'print_time': timezone.now(),
     }
-    
-    return render(request, 'visitors/print_pass.html', context)
+
+    # Pick slip layout from site settings: 0 = full pass, 1 = compact, 2 = EU Habitat compact
+    from site_settings.models import SiteConfiguration, Site
+    site_config = SiteConfiguration.objects.first()
+    slip_templates = {
+        '1': 'visitors/print_pass_compact.html',
+        '2': 'visitors/euhabitat_print_pass_compact.html',
+    }
+    template_name = slip_templates.get(getattr(site_config, 'print_slip_format', '0'), 'visitors/print_pass.html')
+    if template_name != 'visitors/print_pass.html':
+        level = (visitor.level or '').strip()
+        context['site'] = Site.objects.filter(is_active=True).first()
+        context['level_padded'] = level.zfill(2) if level.isdigit() else level
+
+    return render(request, template_name, context)
 
 @login_required
 @require_POST
@@ -1142,6 +1155,12 @@ def self_register(request):
         # Visitor credentials are stored in the application only.
         visitor.terminal_user_id = None
         visitor.save(update_fields=['terminal_user_id'])
+
+        # Skip the selfie step when face capture is disabled in site settings
+        from site_settings.models import SiteConfiguration
+        site_config = SiteConfiguration.objects.first()
+        if site_config and not site_config.enable_face_capture:
+            return redirect('visitors:self_register_success', pass_number=pass_number)
 
         # Redirect to photo capture step
         return redirect('visitors:self_register_photo', pass_number=pass_number)

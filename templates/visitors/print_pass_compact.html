@@ -1,0 +1,78 @@
+{% load tz %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Pass - {{ visitor.full_name }}</title>
+    <style>
+        @media print { body { margin: 0; } .no-print { display: none !important; } .print-container { page-break-inside: avoid; } }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .print-container { max-width: 420px; margin: 0 auto; background: white; border: 2px solid #333; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+        .site-name { font-size: 22px; font-weight: bold; color: #333; margin: 0; text-decoration: underline; }
+        .content { text-align: center; font-size: 14px; line-height: 1.6; }
+        .footer { text-align: center; margin-top: 24px; font-size: 12px; color: #666; }
+        .print-actions { text-align: center; margin: 20px auto; max-width: 420px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 16px 32px; margin: 8px; border: none; border-radius: 12px; cursor: pointer; text-decoration: none; font-size: 18px; font-weight: 600; transition: all 0.2s; min-width: 160px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .btn-print { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }
+        .btn-print:hover, .btn-print:active { background: linear-gradient(135deg, #059669 0%, #047857 100%); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5); }
+        .btn-back { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; box-shadow: 0 4px 14px rgba(107, 114, 128, 0.3); }
+        .btn-back:hover, .btn-back:active { background: linear-gradient(135deg, #4b5563 0%, #374151 100%); transform: translateY(-1px); }
+        @media (max-width: 480px) { .btn { width: 100%; margin: 8px 0; } }
+    </style>
+</head>
+<body>
+    <div class="print-actions no-print">
+        <button onclick="window.print()" class="btn btn-print">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            Print Slip
+        </button>
+        <a href="{% url 'dashboard:index' %}" class="btn btn-back">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back
+        </a>
+    </div>
+    
+    <div class="print-container">
+        <div class="header">
+            <h1 class="site-name">
+                {% if site and site.name %}{{ site.name }}
+                {% elif visitor.category and visitor.category.site and visitor.category.site.name %}{{ visitor.category.site.name }}
+                {% else %}Visitor Management System{% endif %}
+            </h1>
+            <div style="margin-top: 8px; font-size: 14px;">
+                {% if site and site.address %}{{ site.address }}{% elif visitor.category and visitor.category.site and visitor.category.site.address %}{{ visitor.category.site.address }}{% endif %}
+                {% if site and site.postal_code %} {{ site.postal_code }}
+                {% elif visitor.category and visitor.category.site and visitor.category.site.postal_code %} {{ visitor.category.site.postal_code }}{% endif %}
+            </div>
+        </div>
+        <div class="content">
+            <div>Serial No: <strong>{{ visitor.pass_number }}</strong></div>
+            <div>Visitor: <strong>{{ visitor.full_name }}</strong></div>
+            <div>Date: {{ visitor.check_in_time|localtime|date:"d-m-Y h:i A" }}</div>
+            <div>Vehicle No: {% if visitor.vehicle_number %}{{ visitor.vehicle_number }}{% endif %}</div>
+            <div style="margin-top: 8px;">Block / Unit: <strong>Tower{% if visitor.tower %} {{ visitor.tower }}{% endif %} - Level {{ level_padded }} unit {% if visitor.unit %}#{{ visitor.unit }}{% endif %}</strong></div>
+            <div style="margin-top: 8px;">Purpose of Visit: <strong style="display:block; margin-top:6px;">{{ visitor.purpose|default:""|upper }}</strong></div>
+            <div style="margin-top: 16px;">Please Display Slip on Dashboard<br>to prevent illegal parking / wheel clamped</div>
+            <div style="margin-top: 16px; font-weight: 700;">Please park in yellow lots</div>
+            <div style="margin-top: 8px;">Red lots are strictly for residents<br>1st registered cars only<br>Unauthorised parking will be<br>wheel-clamped</div>
+        </div>
+        <div class="footer">
+            <div>Printed on: {{ print_time|localtime|date:"d-m-Y h:i A" }}</div>
+        </div>
+    </div>
+    
+    <script>
+        function printPass() {
+            window.print();
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+    </script>
+</body>
+</html>
